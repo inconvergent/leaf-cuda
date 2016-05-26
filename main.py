@@ -16,7 +16,8 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
   from fn import Fn
   fn = Fn(prefix='./res/')
 
-  colors = random((10,3))
+  colors = random((dl.nz2,3))
+  colors[:,0] *= 0.1
 
   def wrap(render):
 
@@ -27,7 +28,6 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       snum = dl.snum
       vnum = dl.vnum
       zone = dl.zone[:snum]
-      nz2 = dl.nz2
 
       sxy = dl.sxy[:snum,:]
 
@@ -38,10 +38,6 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
 
       ## dots
       for i, (x,y) in enumerate(sxy):
-        # c = zone[i]/nz2
-        # print(c)
-        # rgba = 4*[c]
-        # rgba[3] = 1
 
         rgba = list(colors[zone[i]%len(colors),:]) + [1]
         render.set_front(rgba)

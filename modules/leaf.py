@@ -76,21 +76,19 @@ class Leaf(object):
     self.cuda_agg_count = load_kernel(
       'modules/cuda/agg_count.cu',
       'agg_count',
-      subs={'_THREADS_': self.threads}
+      subs = {'_THREADS_': self.threads}
     )
 
     self.cuda_agg = load_kernel(
       'modules/cuda/agg.cu',
       'agg',
-      subs={'_THREADS_': self.threads}
+      subs = {'_THREADS_': self.threads}
     )
-    # self.cuda_step = load_kernel(
-      # 'modules/cuda/step.cu',
-      # 'step',
-      # subs={
-        # '_THREADS_': self.threads
-      # }
-    # )
+    self.cuda_step = load_kernel(
+      'modules/cuda/step.cu',
+      'step',
+      subs = {'_THREADS_': self.threads}
+    )
 
   def __init_sources(self, init_num):
 
@@ -153,26 +151,17 @@ class Leaf(object):
       grid=(blocks,1)
     )
 
-    # self.cuda_step(
-      # npint(num),
-      # npint(self.nz),
-      # npint(zone_leap),
-      # drv.In(xy[:num,:]),
-      # drv.Out(dxy[:num,:]),
-      # drv.Out(tmp[:num,:]),
-      # drv.Out(link_len[:num,:]),
-      # drv.Out(link_curv[:num,:]),
-      # drv.In(self.links[:num,:]),
-      # drv.In(self.zone_num),
-      # drv.In(self.zone_node),
-      # npfloat(self.stp),
-      # npfloat(self.reject_stp),
-      # npfloat(self.spring_stp),
-      # npfloat(self.near_rad),
-      # npfloat(self.far_rad),
-      # block=(self.threads,1,1),
-      # grid=(blocks,1)
-    # )
+    self.cuda_step(
+      npint(snum),
+      npint(self.nz),
+      npint(zone_leap),
+      drv.In(sxy[:snum,:]),
+      drv.In(self.zone_num),
+      drv.In(self.zone_node),
+      npfloat(self.stp),
+      block=(self.threads,1,1),
+      grid=(blocks,1)
+    )
 
     # xy[:num,:] += dxy[:num,:]
 
