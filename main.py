@@ -13,8 +13,8 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
 
   t0 = time()
 
-  # from fn import Fn
-  # fn = Fn(prefix='./res/')
+  from fn import Fn
+  fn = Fn(prefix='./res/')
 
   colors = random((10,3))
 
@@ -49,8 +49,8 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
 
     # if dl.itt % export_steps == 0:
 
-      # name = fn.name()
-      # render.write_to_png(name+'.png')
+      name = fn.name()
+      render.write_to_png(name+'.png')
       # # export('lattice', name+'.2obj', vertices, edges=edges)
 
     return False
