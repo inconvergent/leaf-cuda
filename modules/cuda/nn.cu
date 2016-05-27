@@ -4,7 +4,7 @@ __device__ float dist(float *a, float *b, int i, int j){
     return sqrt(pow(a[2*i]-b[2*j], 2.0f)+pow(a[2*i+1]-b[2*j+1], 2.0f));
 }
 
-__global__ void step(
+__global__ void NN(
   int nz,
   int zone_leap,
   int *zone_num,

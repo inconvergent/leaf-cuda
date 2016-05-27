@@ -31,7 +31,7 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
 
       sxy = dl.sxy[:snum,:]
       vxy = dl.vxy[:vnum,:]
-      res = dl.res[:vnum]
+      vs = dl.vs[:vnum]
       tmp = dl.tmp[:vnum]
       print(dl.tmp)
 
@@ -50,7 +50,7 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
         render.circle(x, y, 2*dl.one, fill=True)
 
       for i in xrange(vnum):
-        j = res[i]
+        j = vs[i]
         t = tmp[i]
         if j < 0:
           print(i,j,t,'WARNING: no nearby source found')
@@ -75,6 +75,8 @@ def main():
 
   from modules.leaf import Leaf
   from render.render import Animate
+  # from numpy.random import random
+  from numpy import array
 
   colors = {
     'back': [1,1,1,1],
@@ -93,6 +95,7 @@ def main():
   one = 1.0/size
 
   init_sources = 20000
+  init_veins = array([[0.5,0.5]])
 
   stp = one*0.4
 
@@ -100,6 +103,7 @@ def main():
     size,
     stp,
     init_sources,
+    init_veins,
     threads = threads
   )
 

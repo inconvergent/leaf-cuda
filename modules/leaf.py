@@ -26,7 +26,8 @@ class Leaf(object):
       self,
       size,
       stp,
-      init_sources,
+      num_sources,
+      veins,
       nz = 32,
       threads = 256,
       nmax = 1000000
@@ -41,12 +42,13 @@ class Leaf(object):
 
     self.one = 1.0/size
     self.stp = stp
-    self.init_sources = init_sources
+    self.init_sources = num_sources
 
     self.sources_dst = self.one*5.0
 
     self.__init()
     self.__init_sources(self.init_sources)
+    self.__init_veins(veins)
     self.__cuda_init()
 
   def __init(self):
@@ -59,7 +61,7 @@ class Leaf(object):
 
     self.sxy = zeros((nmax, 2), npfloat)
     self.dxy = zeros((nmax, 2), npfloat)
-    self.res = zeros(nmax, npint)
+    self.vs = zeros(nmax, npint)
     self.tmp = zeros(nmax, npfloat)
     self.zone = zeros(nmax, npint)
 
@@ -67,7 +69,6 @@ class Leaf(object):
     self.zone_node = zeros(zone_map_size, npint)
 
     self.zone_num = zeros(self.nz2, npint)
-
 
   def __cuda_init(self):
 
@@ -85,9 +86,9 @@ class Leaf(object):
       'agg',
       subs = {'_THREADS_': self.threads}
     )
-    self.cuda_step = load_kernel(
-      'modules/cuda/step.cu',
-      'step',
+    self.cuda_nn = load_kernel(
+      'modules/cuda/nn.cu',
+      'NN',
       subs = {'_THREADS_': self.threads}
     )
 
@@ -108,11 +109,10 @@ class Leaf(object):
     self.sxy[:n,:] = sources[:,:]
     self.snum = n
 
-    vnum = 100
-    vxy = random((vnum, 2)).astype(npfloat)
+  def __init_veins(self, veins):
 
-    self.vnum = vnum
-    self.vxy = vxy
+    self.vnum = len(veins)
+    self.vxy = veins.astype(npfloat)
 
   def step(self, t=None):
 
@@ -126,7 +126,7 @@ class Leaf(object):
     sxy = self.sxy
     vnum = self.vnum
     vxy = self.vxy
-    res = self.res
+    vs = self.vs
     tmp = self.tmp
     blocks = snum//self.threads + 1
 
@@ -162,10 +162,7 @@ class Leaf(object):
       grid=(blocks,1)
     )
 
-    print(vxy[:vnum,:])
-    print(sxy[:snum,:])
-
-    self.cuda_step(
+    self.cuda_nn(
       npint(self.nz),
       npint(zone_leap),
       In(self.zone_num),
@@ -174,7 +171,7 @@ class Leaf(object):
       In(sxy[:snum,:]),
       npint(vnum),
       In(vxy[:vnum,:]),
-      Out(res[:vnum]),
+      Out(vs[:vnum]),
       Out(tmp[:vnum]),
       npfloat(self.stp),
       block=(self.threads,1,1),
