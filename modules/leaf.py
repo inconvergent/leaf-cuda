@@ -28,14 +28,15 @@ class Leaf(object):
       stp,
       num_sources,
       veins,
-      nz = 32,
+      rad,
+      sources_dst,
       threads = 256,
       nmax = 1000000
     ):
 
     self.itt = 0
 
-    self.nz = nz
+    self.rad = rad
     self.threads = threads
     self.nmax = nmax
     self.size = size
@@ -44,7 +45,7 @@ class Leaf(object):
     self.stp = stp
     self.init_sources = num_sources
 
-    self.sources_dst = self.one*5.0
+    self.sources_dst = sources_dst
 
     self.__init()
     self.__init_sources(self.init_sources)
@@ -56,12 +57,15 @@ class Leaf(object):
     self.vnum = 0
     self.snum = 0
 
+    nz = int(1.0/(2*self.rad))
+    self.nz = nz
+
     self.nz2 = self.nz**2
     nmax = self.nmax
 
     self.sxy = zeros((nmax, 2), npfloat)
     self.dxy = zeros((nmax, 2), npfloat)
-    self.vs = zeros(nmax, npint)
+    self.sv = zeros(nmax, npint)
     self.tmp = zeros(nmax, npfloat)
     self.zone = zeros(nmax, npint)
 
@@ -105,14 +109,18 @@ class Leaf(object):
       self.sources_dst
     )
 
-    n = len(sources)
-    self.sxy[:n,:] = sources[:,:]
-    self.snum = n
+    snum = len(sources)
+    self.sxy[:snum,:] = sources[:,:]
+    self.snum = snum
 
   def __init_veins(self, veins):
 
     self.vnum = len(veins)
     self.vxy = veins.astype(npfloat)
+
+  def __grow(self, sxy, vxy, sv):
+
+    print(sv)
 
   def step(self, t=None):
 
@@ -123,22 +131,24 @@ class Leaf(object):
     self.itt += 1
 
     snum = self.snum
-    sxy = self.sxy
     vnum = self.vnum
+    sxy = self.sxy
     vxy = self.vxy
-    vs = self.vs
+
+    sv = self.sv
     tmp = self.tmp
-    blocks = snum//self.threads + 1
+
+    zone_num = self.zone_num
 
     self.zone_num[:] = 0
 
     self.cuda_agg_count(
-      npint(snum),
+      npint(vnum),
       npint(self.nz),
-      In(sxy[:snum,:]),
+      In(vxy[:vnum,:]),
       InOut(self.zone_num),
       block=(self.threads,1,1),
-      grid=(blocks,1)
+      grid=(vnum//self.threads + 1,1)
     )
 
     zone_leap = self.zone_num[:].max()
@@ -148,35 +158,43 @@ class Leaf(object):
       print('resize, new zone leap: ', zone_map_size*2./self.nz2)
       self.zone_node = zeros(zone_map_size*2, npint)
 
+    self.zone_node[:] = 0
     self.zone_num[:] = 0
 
     self.cuda_agg(
-      npint(snum),
+      npint(vnum),
       npint(self.nz),
       npint(zone_leap),
-      In(sxy[:snum,:]),
+      In(vxy[:vnum,:]),
       InOut(self.zone_num),
-      Out(self.zone_node),
-      Out(self.zone[:snum]),
+      InOut(self.zone_node),
+      Out(self.zone[:vnum]),
       block=(self.threads,1,1),
-      grid=(blocks,1)
+      grid=(vnum//self.threads + 1,1)
     )
+
+    # print('zone_num', self.nz)
+    # print('zone_node max', self.zone_node.max())
+    # print('zone',self.zone[:vnum])
 
     self.cuda_nn(
       npint(self.nz),
+      npfloat(self.rad),
       npint(zone_leap),
-      In(self.zone_num),
+      In(zone_num),
       In(self.zone_node),
       npint(snum),
-      In(sxy[:snum,:]),
       npint(vnum),
+      In(sxy[:snum,:]),
       In(vxy[:vnum,:]),
-      Out(vs[:vnum]),
-      Out(tmp[:vnum]),
-      npfloat(self.stp),
+      Out(sv[:snum]),
+      Out(tmp[:snum]),
       block=(self.threads,1,1),
-      grid=(blocks,1)
+      grid=(snum//self.threads + 1,1)
     )
 
-    # xy[:num,:] += dxy[:num,:]
+    print('snum', snum)
+    print('vnum', vnum)
+
+    # self.__grow(sxy, vxy, sv[:vnum])
 

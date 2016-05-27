@@ -25,4 +25,3 @@ __global__ void agg(
   zone_node[z*zone_leap+o] = i;
 
 }
-

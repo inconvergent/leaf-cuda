@@ -6,54 +6,58 @@ __device__ float dist(float *a, float *b, int i, int j){
 
 __global__ void NN(
   int nz,
+  float rad,
   int zone_leap,
   int *zone_num,
   int *zone_node,
   int snum,
-  float *sxy,
   int vnum,
+  float *sxy,
   float *vxy,
-  int *res,
-  float *tmp,
-  float stp
+  int *sv,
+  float *tmp
 ){
-  const int i = blockIdx.x*THREADS + threadIdx.x;
+  const int s = blockIdx.x*THREADS + threadIdx.x;
 
-  if (i>=vnum){
+  if (s>=snum){
     return;
   }
 
-  const int ii = 2*i;
+  const int ss = 2*s;
 
-  const int za = (int)floor(vxy[ii]*nz);
-  const int zb = (int)floor(vxy[ii+1]*nz);
+  const int za = (int)floor(sxy[ss]*nz);
+  const int zb = (int)floor(sxy[ss+1]*nz);
 
-  float dd;
+  float dd = -1.0f;
 
-  int j;
+  int v = -4;
   int zk;
 
-  int r = -1;
-  float mindst = 100000.0f;
+  int r = -3;
+  float mi = 99999.0f;
+
+  int cand_count = 0;
 
   for (int a=max(za-1,0);a<min(za+2,nz);a++){
     for (int b=max(zb-1,0);b<min(zb+2,nz);b++){
       zk = a*nz+b;
       for (int k=0;k<zone_num[zk];k++){
+        cand_count += 1;
 
-        j = zone_node[zk*zone_leap+k];
+        v = zone_node[zk*zone_leap+k];
+        dd = dist(vxy, sxy, v, s);
+        if (dd>rad){
+          continue;
+        }
 
-        dd = dist(vxy, sxy, i, j);
-
-        if (dd<mindst){
-          mindst = dd;
-          r = j;
+        if (dd<mi){
+          mi = dd;
+          r = v;
         }
       }
     }
   }
 
-  res[i] = r;
-  tmp[i] = mindst;
-
+  sv[s] = r;
+  tmp[s] = mi;
 }

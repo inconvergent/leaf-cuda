@@ -27,43 +27,46 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
 
       snum = dl.snum
       vnum = dl.vnum
-      zone = dl.zone[:snum]
 
       sxy = dl.sxy[:snum,:]
       vxy = dl.vxy[:vnum,:]
-      vs = dl.vs[:vnum]
-      tmp = dl.tmp[:vnum]
-      print(dl.tmp)
+      sv = dl.sv[:snum]
+      tmp = dl.tmp[:snum]
 
       print('itt', dl.itt, 'snum', snum, 'vnum', vnum, 'time', time()-t0)
 
       render.clear_canvas()
       render.set_line_width(dl.one)
 
-      for j, (x,y) in enumerate(sxy):
-        rgba = list(rndcolors[zone[j]%len(rndcolors),:]) + [0.3]
-        render.set_front(rgba)
-        render.circle(x, y, 2*dl.one, fill=True)
+      # sources
+      # render.set_front(colors['red'])
+      # for x,y in sxy:
+        # render.circle(x, y, 2*dl.one, fill=True)
 
+      # veins
+      render.set_front(colors['front'])
+      for x,y in vxy:
+        render.circle(x, y, 3*dl.one, fill=True)
+
+      # nearby
       render.set_front(colors['red'])
-      for i, (x,y) in enumerate(vxy):
-        render.circle(x, y, 2*dl.one, fill=True)
-
-      for i in xrange(vnum):
-        j = vs[i]
-        t = tmp[i]
-        if j < 0:
-          print(i,j,t,'WARNING: no nearby source found')
+      for s in xrange(snum):
+        v = sv[s]
+        if v<0 or s<0:
+          print('WARNING: v', v, 's', s)
           continue
-        else:
-          print(i,j,t,'OK')
-        render.line(sxy[j,0], sxy[j,1], vxy[i,0], vxy[i,1])
+        render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
+        print('OK: v', v, 's', s)
+
+      print(tmp)
+      print(sv, (sv>-1).sum(), len(sv))
+      print(dl.nz, dl.rad)
 
     # if dl.itt % export_steps == 0:
-
       name = fn.name()
       render.write_to_png(name+'.png')
       # # export('lattice', name+'.2obj', vertices, edges=edges)
+
 
     return False
 
@@ -75,14 +78,14 @@ def main():
 
   from modules.leaf import Leaf
   from render.render import Animate
-  # from numpy.random import random
+  from numpy.random import random
   from numpy import array
 
   colors = {
     'back': [1,1,1,1],
     'front': [0,0,0,0.6],
     'cyan': [0,0.6,0.6,0.6],
-    'red': [0.7,0.0,0.0,0.7],
+    'red': [0.7,0.0,0.0,0.3],
     'light': [0,0,0,0.2],
   }
 
@@ -94,8 +97,12 @@ def main():
   size = 512*2
   one = 1.0/size
 
+  rad = 0.1
+  sources_dst = rad*0.01
+
   init_sources = 20000
-  init_veins = array([[0.5,0.5]])
+  # init_veins = array([[0.5,0.5], [0.1,0.1]])
+  init_veins = random((1000,2))
 
   stp = one*0.4
 
@@ -104,6 +111,8 @@ def main():
     stp,
     init_sources,
     init_veins,
+    rad,
+    sources_dst,
     threads = threads
   )
 
