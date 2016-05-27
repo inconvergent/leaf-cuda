@@ -58,15 +58,16 @@ class Leaf(object):
     nmax = self.nmax
 
     self.sxy = zeros((nmax, 2), npfloat)
-    self.xy = zeros((nmax, 2), npfloat)
     self.dxy = zeros((nmax, 2), npfloat)
-    self.tmp = zeros((nmax, 1), npfloat)
+    self.res = zeros(nmax, npint)
+    self.tmp = zeros(nmax, npfloat)
     self.zone = zeros(nmax, npint)
 
     zone_map_size = self.nz2*64
     self.zone_node = zeros(zone_map_size, npint)
 
     self.zone_num = zeros(self.nz2, npint)
+
 
   def __cuda_init(self):
 
@@ -107,16 +108,26 @@ class Leaf(object):
     self.sxy[:n,:] = sources[:,:]
     self.snum = n
 
+    vnum = 100
+    vxy = random((vnum, 2)).astype(npfloat)
+
+    self.vnum = vnum
+    self.vxy = vxy
+
   def step(self, t=None):
 
-    import pycuda.driver as drv
+    from pycuda.driver import In
+    from pycuda.driver import Out
+    from pycuda.driver import InOut
 
     self.itt += 1
 
     snum = self.snum
     sxy = self.sxy
-    # dxy = self.dxy
-    # tmp = self.tmp
+    vnum = self.vnum
+    vxy = self.vxy
+    res = self.res
+    tmp = self.tmp
     blocks = snum//self.threads + 1
 
     self.zone_num[:] = 0
@@ -124,8 +135,8 @@ class Leaf(object):
     self.cuda_agg_count(
       npint(snum),
       npint(self.nz),
-      drv.In(sxy[:snum,:]),
-      drv.InOut(self.zone_num),
+      In(sxy[:snum,:]),
+      InOut(self.zone_num),
       block=(self.threads,1,1),
       grid=(blocks,1)
     )
@@ -143,21 +154,28 @@ class Leaf(object):
       npint(snum),
       npint(self.nz),
       npint(zone_leap),
-      drv.In(sxy[:snum,:]),
-      drv.InOut(self.zone_num),
-      drv.Out(self.zone_node),
-      drv.Out(self.zone[:snum]),
+      In(sxy[:snum,:]),
+      InOut(self.zone_num),
+      Out(self.zone_node),
+      Out(self.zone[:snum]),
       block=(self.threads,1,1),
       grid=(blocks,1)
     )
 
+    print(vxy[:vnum,:])
+    print(sxy[:snum,:])
+
     self.cuda_step(
-      npint(snum),
       npint(self.nz),
       npint(zone_leap),
-      drv.In(sxy[:snum,:]),
-      drv.In(self.zone_num),
-      drv.In(self.zone_node),
+      In(self.zone_num),
+      In(self.zone_node),
+      npint(snum),
+      In(sxy[:snum,:]),
+      npint(vnum),
+      In(vxy[:vnum,:]),
+      Out(res[:vnum]),
+      Out(tmp[:vnum]),
       npfloat(self.stp),
       block=(self.threads,1,1),
       grid=(blocks,1)

@@ -1,61 +1,59 @@
 #define THREADS _THREADS_
 
+__device__ float dist(float *a, float *b, int i, int j){
+    return sqrt(pow(a[2*i]-b[2*j], 2.0f)+pow(a[2*i+1]-b[2*j+1], 2.0f));
+}
+
 __global__ void step(
-  int n,
   int nz,
   int zone_leap,
-  float *xy,
   int *zone_num,
   int *zone_node,
+  int snum,
+  float *sxy,
+  int vnum,
+  float *vxy,
+  int *res,
+  float *tmp,
   float stp
 ){
   const int i = blockIdx.x*THREADS + threadIdx.x;
 
-  if (i>=n){
+  if (i>=vnum){
     return;
   }
 
   const int ii = 2*i;
 
-  const int zi = (int)floor(xy[ii]*nz);
-  const int zj = (int)floor(xy[ii+1]*nz);
+  const int za = (int)floor(vxy[ii]*nz);
+  const int zb = (int)floor(vxy[ii+1]*nz);
 
-  float dx = 0.0f;
-  float dy = 0.0f;
-  float dd = 0.0f;
-
+  float dd;
 
   int j;
-  int jj;
   int zk;
 
-  int cand_count = 0;
-  int total_count = 0;
+  int r = -1;
+  float mindst = 100000.0f;
 
-  // unlinked
-  for (int a=max(zi-1,0);a<min(zi+2,nz);a++){
-    for (int b=max(zj-1,0);b<min(zj+2,nz);b++){
+  for (int a=max(za-1,0);a<min(za+2,nz);a++){
+    for (int b=max(zb-1,0);b<min(zb+2,nz);b++){
       zk = a*nz+b;
       for (int k=0;k<zone_num[zk];k++){
 
         j = zone_node[zk*zone_leap+k];
 
-        if (i==j){
-          continue;
+        dd = dist(vxy, sxy, i, j);
+
+        if (dd<mindst){
+          mindst = dd;
+          r = j;
         }
-
-        /*jj = 2*j;*/
-        /*total_count += 1;*/
-        /*dx = xy[ii] - xy[jj];*/
-        /*dy = xy[ii+1] - xy[jj+1];*/
-        /*dd = sqrt(dx*dx+dy*dy);*/
-
       }
     }
   }
 
-  // persist
-  /*dxy[ii] = sx*stp;*/
-  /*dxy[ii+1] = sy*stp;*/
+  res[i] = r;
+  tmp[i] = mindst;
 
 }

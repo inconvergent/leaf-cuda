@@ -16,8 +16,8 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
   from fn import Fn
   fn = Fn(prefix='./res/')
 
-  colors = random((dl.nz2,3))
-  colors[:,0] *= 0.1
+  rndcolors = random((dl.nz2,3))
+  rndcolors[:,0] *= 0.1
 
   def wrap(render):
 
@@ -30,18 +30,34 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       zone = dl.zone[:snum]
 
       sxy = dl.sxy[:snum,:]
+      vxy = dl.vxy[:vnum,:]
+      res = dl.res[:vnum]
+      tmp = dl.tmp[:vnum]
+      print(dl.tmp)
 
       print('itt', dl.itt, 'snum', snum, 'vnum', vnum, 'time', time()-t0)
 
       render.clear_canvas()
       render.set_line_width(dl.one)
 
-      ## dots
-      for i, (x,y) in enumerate(sxy):
-
-        rgba = list(colors[zone[i]%len(colors),:]) + [1]
+      for j, (x,y) in enumerate(sxy):
+        rgba = list(rndcolors[zone[j]%len(rndcolors),:]) + [0.3]
         render.set_front(rgba)
         render.circle(x, y, 2*dl.one, fill=True)
+
+      render.set_front(colors['red'])
+      for i, (x,y) in enumerate(vxy):
+        render.circle(x, y, 2*dl.one, fill=True)
+
+      for i in xrange(vnum):
+        j = res[i]
+        t = tmp[i]
+        if j < 0:
+          print(i,j,t,'WARNING: no nearby source found')
+          continue
+        else:
+          print(i,j,t,'OK')
+        render.line(sxy[j,0], sxy[j,1], vxy[i,0], vxy[i,1])
 
     # if dl.itt % export_steps == 0:
 
@@ -64,6 +80,7 @@ def main():
     'back': [1,1,1,1],
     'front': [0,0,0,0.6],
     'cyan': [0,0.6,0.6,0.6],
+    'red': [0.7,0.0,0.0,0.7],
     'light': [0,0,0,0.2],
   }
 
@@ -75,7 +92,7 @@ def main():
   size = 512*2
   one = 1.0/size
 
-  init_sources = 200000
+  init_sources = 20000
 
   stp = one*0.4
 
