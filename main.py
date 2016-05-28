@@ -18,10 +18,11 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
 
   rndcolors = random((dl.nz2,3))
   rndcolors[:,0] *= 0.1
+  step = dl.step()
 
   def wrap(render):
 
-    zone_leap, zone_node, zone_num, sv, svdst = dl.step()
+    sv = step.next()
 
     if dl.itt % render_steps == 0:
 
@@ -37,7 +38,7 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       render.set_line_width(dl.one)
 
       # sources
-      render.set_front(colors['front'])
+      render.set_front(colors['cyan'])
       for x,y in sxy:
         render.circle(x, y, 2*dl.one, fill=True)
 
@@ -49,7 +50,7 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       # nearby
       warnings = 0
       oks = 0
-      render.set_front(colors['red'])
+      render.set_front(colors['cyan'])
       for s in xrange(snum):
         v = sv[s]
         if v<0 or s<0:
@@ -58,7 +59,6 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
           continue
         render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
         oks += 1
-
       print('snum: ', snum)
       print('vnum: ', vnum)
       print('WARNING: ', warnings)
@@ -69,8 +69,7 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       render.write_to_png(name+'.png')
       # # export('lattice', name+'.2obj', vertices, edges=edges)
 
-
-    return False
+    return True
 
   return wrap
 
@@ -86,14 +85,14 @@ def main():
   colors = {
     'back': [1,1,1,1],
     'front': [0,0,0,0.6],
-    'cyan': [0,0.6,0.6,0.6],
+    'cyan': [0,0.6,0.6,0.3],
     'red': [0.7,0.0,0.0,0.3],
     'light': [0,0,0,0.2],
   }
 
   threads = 512
 
-  render_steps = 1
+  render_steps = 10
   export_steps = 100000
 
   size = 512*2
@@ -104,11 +103,11 @@ def main():
   area_rad = 50*node_rad
   sources_rad = 2*node_rad
   stp = node_rad*0.33
-  kill_rad = node_rad
+  kill_rad = node_rad*2
 
   init_sources = 20000
   # init_veins = array([[0.5,0.5], [0.1,0.1]])
-  init_veins = random((10,2))
+  init_veins = random((3,2))
 
 
   DL = Leaf(

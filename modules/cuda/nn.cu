@@ -15,7 +15,7 @@ __global__ void NN(
   float *sxy,
   float *vxy,
   int *sv,
-  float *tmp
+  float *dst
 ){
   const int s = blockIdx.x*THREADS + threadIdx.x;
 
@@ -59,5 +59,5 @@ __global__ void NN(
   }
 
   sv[s] = r;
-  tmp[s] = mi;
+  dst[s] = mi;
 }

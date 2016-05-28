@@ -66,10 +66,10 @@ class Leaf(object):
     nmax = self.nmax
 
     self.sxy = zeros((nmax, 2), npfloat)
+    self.vxy = zeros((nmax, 2), npfloat)
     self.vec = zeros((nmax, 2), npfloat)
-    self.dist = zeros(nmax, npfloat)
     self.sv = zeros(nmax, npint)
-    self.tmp = zeros(nmax, npfloat)
+    self.dst = zeros(nmax, npfloat)
     self.zone = zeros(nmax, npint)
 
     zone_map_size = self.nz2*64
@@ -125,8 +125,9 @@ class Leaf(object):
 
   def __init_veins(self, veins):
 
-    self.vnum = len(veins)
-    self.vxy = veins.astype(npfloat)
+    vnum = len(veins)
+    self.vnum = vnum
+    self.vxy[:vnum,:] = veins.astype(npfloat)
 
   def __make_zonemap(self):
 
@@ -138,7 +139,6 @@ class Leaf(object):
     vnum = self.vnum
 
     zone_num = self.zone_num
-    zone_node = self.zone_node
     zone = self.zone
 
     zone_num[:] = 0
@@ -155,11 +155,11 @@ class Leaf(object):
     zone_leap = zone_num[:].max()
     zone_map_size = self.nz2*zone_leap
 
-    if zone_map_size>len(zone_node):
+    if zone_map_size>len(self.zone_node):
       print('resize, new zone leap: ', zone_map_size*2./self.nz2)
-      zone_node = zeros(zone_map_size*2, npint)
+      self.zone_node = zeros(zone_map_size*2, npint)
 
-    zone_node[:] = 0
+    self.zone_node[:] = 0
     zone_num[:] = 0
 
     self.cuda_agg(
@@ -168,13 +168,13 @@ class Leaf(object):
       npint(zone_leap),
       In(vxy[:vnum,:]),
       InOut(zone_num),
-      InOut(zone_node),
+      InOut(self.zone_node),
       Out(zone[:vnum]),
       block=(self.threads,1,1),
       grid=(vnum//self.threads + 1,1)
     )
 
-    return zone_leap, zone_node, zone_num
+    return zone_leap, self.zone_node, zone_num
 
   def __nn_query(self, zone_leap, zone_node, zone_num):
 
@@ -185,25 +185,25 @@ class Leaf(object):
     vnum = self.vnum
 
     sv = self.sv[:snum]
-    tmp = self.tmp[:snum]
+    dst = self.dst[:snum]
 
     self.cuda_nn(
       npint(self.nz),
       npfloat(self.area_rad),
       npint(zone_leap),
       In(zone_num),
-      In(self.zone_node),
+      In(zone_node),
       npint(snum),
       npint(vnum),
       In(self.sxy[:snum,:]),
       In(self.vxy[:vnum,:]),
       Out(sv),
-      Out(tmp),
+      Out(dst),
       block=(self.threads,1,1),
       grid=(snum//self.threads + 1,1)
     )
 
-    return sv, tmp
+    return sv, dst
 
   def __get_vs(self, sv):
 
@@ -225,10 +225,6 @@ class Leaf(object):
     vs_map = concatenate([v for v in vs_dict.values()]).astype(npint)
     vs_ind = cumsum(concatenate([[0],vs_counts])).astype(npint)
 
-    # print(vs_map)
-    # print(vs_ind)
-    # print(vs_counts)
-
     return vs_dict, vs_map, vs_ind, vs_counts
 
   def __growth(self, vs_map, vs_ind, vs_counts):
@@ -239,12 +235,10 @@ class Leaf(object):
     vnum = self.vnum
     snum = self.snum
     vec = self.vec[:vnum,:]
-    dst = self.tmp[:vnum]
 
     sxy = self.sxy[:snum, :]
     vxy = self.vxy[:vnum, :]
 
-    dst[:] = -1.0
     vec[:,:] = -99.0
 
     self.cuda_growth(
@@ -255,23 +249,46 @@ class Leaf(object):
       In(vxy),
       npint(vnum),
       InOut(vec),
-      InOut(dst),
       block=(self.threads,1,1),
       grid=(vnum//self.threads + 1,1)
     )
 
-    return vec
+    for i in xrange(vnum):
 
-  def step(self, t=None):
+      count = 0
 
-    self.itt += 1
+      gv = vec[i,:]
+      if gv[0]<-3.0:
+        continue
+      newxy = self.vxy[i,:] + self.stp*gv
+      self.vxy[vnum+count,:] = newxy
+      count += 1
 
-    zone_leap, zone_node, zone_num = self.__make_zonemap()
-    sv, dst = self.__nn_query(zone_leap, zone_node, zone_num)
-    _, vs_map, vs_ind, vs_counts = self.__get_vs(sv)
+    self.vnum += count
 
-    vec = self.__growth(vs_map, vs_ind, vs_counts)
-    print(vec)
+  def __source_death(self, sv, dst):
 
-    return zone_leap, zone_node, zone_num, sv, dst
+    inds = (dst>self.kill_rad).nonzero()[0]
+    alive = len(inds)
+
+    self.sxy[:alive,:] = self.sxy[inds,:]
+    self.snum = alive
+    # print(mask, mask.sum())
+
+  def step(self, show=None):
+
+    while True:
+
+      self.itt += 1
+
+      zone_leap, zone_node, zone_num = self.__make_zonemap()
+      sv, dst = self.__nn_query(zone_leap, zone_node, zone_num)
+
+      # sv is out of sync after __source_death is called
+      yield sv
+
+      _, vs_map, vs_ind, vs_counts = self.__get_vs(sv)
+      self.__growth(vs_map, vs_ind, vs_counts)
+      self.__source_death(sv, dst)
+      # return sv
 

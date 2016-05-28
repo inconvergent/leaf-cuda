@@ -7,8 +7,7 @@ __global__ void Growth(
   float *sxy,
   float *vxy,
   int vnum,
-  float *vec,
-  float *dst
+  float *vec
 ){
   const int v = blockIdx.x*THREADS + threadIdx.x;
   const int vv = 2*v;
@@ -21,6 +20,8 @@ __global__ void Growth(
   const int start = vs_ind[v];
 
   if (v_count<1){
+    vec[vv] = -100.0f;
+    vec[vv+1] = -100.0f;
     return;
   }
 
@@ -47,8 +48,6 @@ __global__ void Growth(
   gx /= dd;
   gy /= dd;
 
-  dst[v] = 1.0f;
   vec[vv] = gx;
   vec[vv+1] = gy;
-
 }
