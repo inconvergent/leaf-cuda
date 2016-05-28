@@ -100,7 +100,7 @@ def main():
 
   node_rad = 4*one
 
-  area_rad = 50*node_rad
+  area_rad = 10*node_rad
   sources_rad = 2*node_rad
   stp = node_rad*0.5
   kill_rad = node_rad*2
