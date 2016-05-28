@@ -22,8 +22,8 @@ class Leaf(object):
       self,
       size,
       stp,
-      num_sources,
-      veins,
+      init_sources,
+      init_veins,
       area_rad,
       kill_rad,
       sources_rad,
@@ -41,13 +41,12 @@ class Leaf(object):
 
     self.one = 1.0/size
     self.stp = stp
-    self.init_sources = num_sources
 
     self.sources_rad = sources_rad
 
     self.__init()
-    self.__init_sources(self.init_sources)
-    self.__init_veins(veins)
+    self.__init_sources(init_sources)
+    self.__init_veins(init_veins)
     self.__cuda_init()
 
   def __init(self):
@@ -102,28 +101,17 @@ class Leaf(object):
       subs = {'_THREADS_': self.threads}
     )
 
-  def __init_sources(self, init_num):
+  def __init_sources(self, init_sources):
 
-    from dddUtils.random import darts_rect
-
-    sources = darts_rect(
-      init_num,
-      0.5,
-      0.5,
-      0.9,
-      0.9,
-      self.sources_rad
-    )
-
-    snum = len(sources)
-    self.sxy[:snum,:] = sources[:,:]
+    snum = len(init_sources)
+    self.sxy[:snum,:] = init_sources.astype(npfloat)
     self.snum = snum
 
-  def __init_veins(self, veins):
+  def __init_veins(self, init_veins):
 
-    vnum = len(veins)
+    vnum = len(init_veins)
+    self.vxy[:vnum,:] = init_veins.astype(npfloat)
     self.vnum = vnum
-    self.vxy[:vnum,:] = veins.astype(npfloat)
 
   def __make_zonemap(self):
 
@@ -227,10 +215,13 @@ class Leaf(object):
 
     from pycuda.driver import In
     from pycuda.driver import InOut
+    from numpy.linalg import norm
 
     vnum = self.vnum
     snum = self.snum
     vec = self.vec[:vnum,:]
+
+    stp = self.stp
 
     sxy = self.sxy[:snum, :]
     vxy = self.vxy[:vnum, :]
@@ -255,8 +246,9 @@ class Leaf(object):
       gv = vec[i,:]
       if gv[0]<-3.0:
         continue
-      newxy = self.vxy[i,:] + self.stp*gv
-      self.vxy[vnum+count,:] = newxy
+
+      # print(norm(gv))
+      self.vxy[vnum+count,:] = self.vxy[i,:] + stp*gv
       count += 1
 
     self.vnum += count

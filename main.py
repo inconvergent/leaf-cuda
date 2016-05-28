@@ -64,7 +64,7 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       print('WARNING: ', warnings)
       print('OK: ', oks)
 
-    # if dl.itt % export_steps == 0:
+    if dl.itt % export_steps == 0:
       name = fn.name()
       render.write_to_png(name+'.png')
       # # export('lattice', name+'.2obj', vertices, edges=edges)
@@ -80,7 +80,6 @@ def main():
   from modules.leaf import Leaf
   from render.render import Animate
   from numpy.random import random
-  from numpy import array
 
   colors = {
     'back': [1,1,1,1],
@@ -93,21 +92,30 @@ def main():
   threads = 512
 
   render_steps = 10
-  export_steps = 100000
+  export_steps = 10
 
   size = 512*2
   one = 1.0/size
 
-  node_rad = 10*one
+  node_rad = 20*one
 
   area_rad = 10*node_rad
-  sources_rad = 2*node_rad
-  stp = node_rad*0.5
-  kill_rad = node_rad*4
+  sources_rad = node_rad
+  stp = node_rad*0.1
+  kill_rad = node_rad
 
-  init_sources = 5000
-  # init_veins = array([[0.5,0.5], [0.1,0.1]])
+  init_num_sources = 5000
   init_veins = random((1,2))
+
+  from dddUtils.random import darts_rect
+  init_sources = darts_rect(
+    init_num_sources,
+    0.5,
+    0.5,
+    0.9,
+    0.9,
+    sources_rad
+  )
 
 
   DL = Leaf(
