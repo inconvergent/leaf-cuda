@@ -44,7 +44,7 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       # veins
       render.set_front(colors['front'])
       for x,y in vxy:
-        render.circle(x, y, dl.one, fill=True)
+        render.circle(x, y, 1.1*dl.one, fill=True)
 
       # # sources
       # render.set_front(colors['cyan'])
@@ -52,12 +52,12 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
         # render.circle(x, y, dl.one, fill=True)
 
       # # nearby
-      # render.set_front(colors['cyan'])
-      # for s in xrange(snum):
-        # v = sv[s]
-        # if v<0 or s<0:
-          # continue
-        # render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
+      render.set_front(colors['cyan'])
+      for s in xrange(snum):
+        v = sv[s]
+        if v<0 or s<0:
+          continue
+        render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
 
     if dl.itt % export_steps == 0:
       name = fn.name()
@@ -77,7 +77,7 @@ def main():
 
   colors = {
     'back': [1,1,1,1],
-    'front': [0,0,0,0.4],
+    'front': [0,0,0,0.7],
     'cyan': [0,0.6,0.6,0.3],
     'red': [0.7,0.0,0.0,0.3],
     'light': [0,0,0,0.2],
