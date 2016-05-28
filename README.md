@@ -2,7 +2,9 @@
 
 ![img](/img/img.png?raw=true "img")
 
-Cuda
+Cuda implementation of the leaf venation algorithm:
+http://pages.cpsc.ucalgary.ca/~federl/Publications/Siggraph-2005/
+
 
 ## Prerequisites
 
