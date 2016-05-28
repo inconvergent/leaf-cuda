@@ -40,12 +40,12 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       # sources
       render.set_front(colors['cyan'])
       for x,y in sxy:
-        render.circle(x, y, 2*dl.one, fill=True)
+        render.circle(x, y, 1.5*dl.one, fill=True)
 
       # veins
       render.set_front(colors['front'])
       for x,y in vxy:
-        render.circle(x, y, 3*dl.one, fill=True)
+        render.circle(x, y, 1.5*dl.one, fill=True)
 
       # nearby
       warnings = 0
@@ -84,7 +84,7 @@ def main():
 
   colors = {
     'back': [1,1,1,1],
-    'front': [0,0,0,0.6],
+    'front': [0,0,0,0.1],
     'cyan': [0,0.6,0.6,0.3],
     'red': [0.7,0.0,0.0,0.3],
     'light': [0,0,0,0.2],
@@ -98,11 +98,11 @@ def main():
   size = 512*2
   one = 1.0/size
 
-  node_rad = 2*one
+  node_rad = 4*one
 
   area_rad = 50*node_rad
   sources_rad = 2*node_rad
-  stp = node_rad*0.33
+  stp = node_rad*0.5
   kill_rad = node_rad*2
 
   init_sources = 20000

@@ -6,10 +6,6 @@ from __future__ import division
 
 from numpy import pi
 from numpy import zeros
-from numpy import sin
-from numpy import cos
-from numpy import sqrt
-from numpy.random import random
 
 from numpy import float32 as npfloat
 from numpy import int32 as npint
@@ -253,9 +249,8 @@ class Leaf(object):
       grid=(vnum//self.threads + 1,1)
     )
 
+    count = 0
     for i in xrange(vnum):
-
-      count = 0
 
       gv = vec[i,:]
       if gv[0]<-3.0:
@@ -270,10 +265,8 @@ class Leaf(object):
 
     inds = (dst>self.kill_rad).nonzero()[0]
     alive = len(inds)
-
     self.sxy[:alive,:] = self.sxy[inds,:]
     self.snum = alive
-    # print(mask, mask.sum())
 
   def step(self, show=None):
 
@@ -290,5 +283,4 @@ class Leaf(object):
       _, vs_map, vs_ind, vs_counts = self.__get_vs(sv)
       self.__growth(vs_map, vs_ind, vs_counts)
       self.__source_death(sv, dst)
-      # return sv
 
