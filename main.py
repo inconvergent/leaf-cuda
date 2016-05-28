@@ -84,25 +84,23 @@ def main():
 
   threads = 512
 
-  render_steps = 100
-  export_steps = 100
+  render_steps = 20
+  export_steps = 20
 
   size = 512*2
   one = 1.0/size
 
-  node_rad = 5*one
+  node_rad = 2*one
 
   area_rad = 10*node_rad
-  sources_rad = node_rad
-  stp = node_rad*0.1
+  sources_rad = 2*node_rad
+  stp = node_rad*0.5
   kill_rad = node_rad
 
-  init_veins = random((1,2))
-  init_veins[0,0] = 0.5
-  init_veins[0,1] = 0.5
+  init_veins = random((10,2))
 
   from dddUtils.random import darts_rect
-  init_num_sources = 10000
+  init_num_sources = 100000
   init_sources = darts_rect(init_num_sources, 0.5, 0.5, 0.9, 0.9, sources_rad)
 
   DL = Leaf(
