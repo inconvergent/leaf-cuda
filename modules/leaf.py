@@ -196,6 +196,9 @@ class Leaf(object):
     from collections import defaultdict
     from numpy import concatenate
     from numpy import cumsum
+    from operator import itemgetter
+
+    first = itemgetter(0)
 
     vs_dict = defaultdict(list)
     vs_counts = zeros(self.vnum, npint)
@@ -206,16 +209,18 @@ class Leaf(object):
       vs_dict[v].append(s)
       vs_counts[v] += 1
 
-    vs_map = concatenate([v for v in vs_dict.values()]).astype(npint)
+    vs_tuples = [(k,v) for k,v in vs_dict.iteritems()]
+    vs_tuples = sorted(vs_tuples, key=first)
+
+    vs_map = concatenate([b for _,b in vs_tuples]).astype(npint)
     vs_ind = cumsum(concatenate([[0],vs_counts])).astype(npint)
 
-    return vs_dict, vs_map, vs_ind, vs_counts
+    return vs_tuples, vs_map, vs_ind, vs_counts
 
   def __growth(self, vs_map, vs_ind, vs_counts):
 
     from pycuda.driver import In
     from pycuda.driver import InOut
-    from numpy.linalg import norm
 
     vnum = self.vnum
     snum = self.snum
@@ -241,13 +246,14 @@ class Leaf(object):
     )
 
     count = 0
+    warnings = 0
     for i in xrange(vnum):
 
       gv = vec[i,:]
       if gv[0]<-3.0:
+        warnings += 1
         continue
 
-      # print(norm(gv))
       self.vxy[vnum+count,:] = self.vxy[i,:] + stp*gv
       count += 1
 
@@ -275,4 +281,7 @@ class Leaf(object):
       _, vs_map, vs_ind, vs_counts = self.__get_vs(sv)
       self.__growth(vs_map, vs_ind, vs_counts)
       self.__source_death(sv, dst)
+
+      if self.snum<1:
+        return
 

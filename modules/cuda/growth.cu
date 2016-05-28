@@ -19,7 +19,6 @@ __global__ void Growth(
   const int v_count = vs_counts[v];
   const int start = vs_ind[v];
 
-
   if (v_count<1){
     vec[vv] = -100.0f;
     vec[vv+1] = -100.0f;
@@ -27,23 +26,25 @@ __global__ void Growth(
   }
 
   int ss;
-  float dd = 1.0f;
-  float dx;
-  float dy;
+  float gx;
+  float gy;
+  float dd;
 
-  float gx = 0.0f;
-  float gy = 0.0f;
+  float mx = 0.0f;
+  float my = 0.0f;
+  int count = 0;
 
   for (int k=0; k<v_count; k++){
     ss = 2*vs_map[start + k];
-    dx = sxy[ss] - vxy[vv];
-    dy = sxy[ss+1] - vxy[vv+1];
-    dd = sqrt(dx*dx + dy*dy);
-    gx += dx/dd;
-    gy += dy/dd;
+    mx += sxy[ss];
+    my += sxy[ss+1];
+    count += 1;
   }
 
+  gx = mx/(float)count-vxy[vv];
+  gy = my/(float)count-vxy[vv+1];
   dd = sqrt(gx*gx+gy*gy);
+
   vec[vv] = gx/dd;
   vec[vv+1] = gy/dd;
 }
