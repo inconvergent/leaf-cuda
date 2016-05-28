@@ -28,15 +28,17 @@ class Leaf(object):
       stp,
       num_sources,
       veins,
-      rad,
-      sources_dst,
+      area_rad,
+      kill_rad,
+      sources_rad,
       threads = 256,
       nmax = 1000000
     ):
 
     self.itt = 0
 
-    self.rad = rad
+    self.area_rad = area_rad
+    self.kill_rad = kill_rad
     self.threads = threads
     self.nmax = nmax
     self.size = size
@@ -45,7 +47,7 @@ class Leaf(object):
     self.stp = stp
     self.init_sources = num_sources
 
-    self.sources_dst = sources_dst
+    self.sources_rad = sources_rad
 
     self.__init()
     self.__init_sources(self.init_sources)
@@ -57,14 +59,15 @@ class Leaf(object):
     self.vnum = 0
     self.snum = 0
 
-    nz = int(1.0/(2*self.rad))
+    nz = int(1.0/(2*self.area_rad))
     self.nz = nz
 
     self.nz2 = self.nz**2
     nmax = self.nmax
 
     self.sxy = zeros((nmax, 2), npfloat)
-    self.dxy = zeros((nmax, 2), npfloat)
+    self.vec = zeros((nmax, 2), npfloat)
+    self.dist = zeros(nmax, npfloat)
     self.sv = zeros(nmax, npint)
     self.tmp = zeros(nmax, npfloat)
     self.zone = zeros(nmax, npint)
@@ -90,9 +93,16 @@ class Leaf(object):
       'agg',
       subs = {'_THREADS_': self.threads}
     )
+
     self.cuda_nn = load_kernel(
       'modules/cuda/nn.cu',
       'NN',
+      subs = {'_THREADS_': self.threads}
+    )
+
+    self.cuda_growth = load_kernel(
+      'modules/cuda/growth.cu',
+      'Growth',
       subs = {'_THREADS_': self.threads}
     )
 
@@ -106,7 +116,7 @@ class Leaf(object):
       0.5,
       0.9,
       0.9,
-      self.sources_dst
+      self.sources_rad
     )
 
     snum = len(sources)
@@ -179,7 +189,7 @@ class Leaf(object):
 
     self.cuda_nn(
       npint(self.nz),
-      npfloat(self.rad),
+      npfloat(self.area_rad),
       npint(zone_leap),
       In(zone_num),
       In(self.zone_node),
@@ -195,9 +205,62 @@ class Leaf(object):
 
     return sv, tmp
 
-  def __grow(self, sxy, vxy, sv):
+  def __get_vs(self, sv):
 
-    print(sv)
+    ## TODO: write as kernel?
+
+    from collections import defaultdict
+    from numpy import concatenate
+    from numpy import cumsum
+
+    vs_dict = defaultdict(list)
+    vs_counts = zeros(self.vnum, npint)
+
+    for s,v in enumerate(sv):
+      if s<0 or v<0:
+        continue
+      vs_dict[v].append(s)
+      vs_counts[v] += 1
+
+    vs_map = concatenate([v for v in vs_dict.values()]).astype(npint)
+    vs_ind = cumsum(concatenate([[0],vs_counts])).astype(npint)
+
+    # print(vs_map)
+    # print(vs_ind)
+    # print(vs_counts)
+
+    return vs_dict, vs_map, vs_ind, vs_counts
+
+  def __growth(self, vs_map, vs_ind, vs_counts):
+
+    from pycuda.driver import In
+    from pycuda.driver import InOut
+
+    vnum = self.vnum
+    snum = self.snum
+    vec = self.vec[:vnum,:]
+    dst = self.tmp[:vnum]
+
+    sxy = self.sxy[:snum, :]
+    vxy = self.vxy[:vnum, :]
+
+    dst[:] = -1.0
+    vec[:,:] = -99.0
+
+    self.cuda_growth(
+      In(vs_map),
+      In(vs_ind),
+      In(vs_counts),
+      In(sxy),
+      In(vxy),
+      npint(vnum),
+      InOut(vec),
+      InOut(dst),
+      block=(self.threads,1,1),
+      grid=(vnum//self.threads + 1,1)
+    )
+
+    return vec
 
   def step(self, t=None):
 
@@ -205,6 +268,10 @@ class Leaf(object):
 
     zone_leap, zone_node, zone_num = self.__make_zonemap()
     sv, dst = self.__nn_query(zone_leap, zone_node, zone_num)
+    _, vs_map, vs_ind, vs_counts = self.__get_vs(sv)
+
+    vec = self.__growth(vs_map, vs_ind, vs_counts)
+    print(vec)
 
     return zone_leap, zone_node, zone_num, sv, dst
 

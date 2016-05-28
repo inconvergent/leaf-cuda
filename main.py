@@ -99,22 +99,26 @@ def main():
   size = 512*2
   one = 1.0/size
 
-  rad = 0.1
-  sources_dst = rad*0.1
+  node_rad = 2*one
+
+  area_rad = 50*node_rad
+  sources_rad = 2*node_rad
+  stp = node_rad*0.33
+  kill_rad = node_rad
 
   init_sources = 20000
   # init_veins = array([[0.5,0.5], [0.1,0.1]])
   init_veins = random((10,2))
 
-  stp = one*0.4
 
   DL = Leaf(
     size,
     stp,
     init_sources,
     init_veins,
-    rad,
-    sources_dst,
+    area_rad,
+    kill_rad,
+    sources_rad,
     threads = threads
   )
 
