@@ -43,6 +43,7 @@ class Leaf(object):
     self.stp = stp
 
     self.sources_rad = sources_rad
+    self.max_descendants = 3
 
     self.__init()
     self.__init_sources(init_sources)
@@ -64,6 +65,7 @@ class Leaf(object):
     self.vxy = zeros((nmax, 2), npfloat)
     self.vec = zeros((nmax, 2), npfloat)
     self.sv = zeros(nmax, npint)
+    self.num_descendants = zeros(nmax, npint)
     self.dst = zeros(nmax, npfloat)
     self.zone = zeros(nmax, npint)
 
@@ -226,6 +228,9 @@ class Leaf(object):
     snum = self.snum
     vec = self.vec[:vnum,:]
 
+    max_descendants = self.max_descendants
+    num_descendants = self.num_descendants[:vnum]
+
     stp = self.stp
 
     sxy = self.sxy[:snum, :]
@@ -247,6 +252,7 @@ class Leaf(object):
 
     count = 0
     warnings = 0
+    abort = True
     for i in xrange(vnum):
 
       gv = vec[i,:]
@@ -254,10 +260,17 @@ class Leaf(object):
         warnings += 1
         continue
 
+      if num_descendants[i]>max_descendants:
+        continue
+
       self.vxy[vnum+count,:] = self.vxy[i,:] + stp*gv
+      num_descendants[i] += 1
       count += 1
+      abort = False
 
     self.vnum += count
+
+    return not abort
 
   def __source_death(self, sv, dst):
 
@@ -279,7 +292,9 @@ class Leaf(object):
       yield sv
 
       _, vs_map, vs_ind, vs_counts = self.__get_vs(sv)
-      self.__growth(vs_map, vs_ind, vs_counts)
+      if not self.__growth(vs_map, vs_ind, vs_counts):
+        return
+
       self.__source_death(sv, dst)
 
       if self.snum<1:

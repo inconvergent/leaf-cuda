@@ -9,6 +9,7 @@ from __future__ import division
 def get_wrap(dl, colors, render_steps=10, export_steps=10):
 
   from time import time
+  from time import strftime
   from numpy.random import random
 
   t0 = time()
@@ -35,28 +36,28 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       sxy = dl.sxy[:snum,:]
       vxy = dl.vxy[:vnum,:]
 
-      print('itt', dl.itt, 'snum', snum, 'vnum', vnum, 'time', time()-t0)
+      print(strftime("%Y-%m-%d %H:%M:%S"), 'itt', dl.itt, 'snum', snum, 'vnum', vnum, 'time', time()-t0)
 
       render.clear_canvas()
       render.set_line_width(dl.one)
 
-      # sources
-      render.set_front(colors['cyan'])
-      for x,y in sxy:
-        render.circle(x, y, 1.5*dl.one, fill=True)
-
       # veins
       render.set_front(colors['front'])
       for x,y in vxy:
-        render.circle(x, y, 1.5*dl.one, fill=True)
+        render.circle(x, y, dl.one, fill=True)
 
-      # nearby
-      render.set_front(colors['cyan'])
-      for s in xrange(snum):
-        v = sv[s]
-        if v<0 or s<0:
-          continue
-        render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
+      # # sources
+      # render.set_front(colors['cyan'])
+      # for x,y in sxy:
+        # render.circle(x, y, dl.one, fill=True)
+
+      # # nearby
+      # render.set_front(colors['cyan'])
+      # for s in xrange(snum):
+        # v = sv[s]
+        # if v<0 or s<0:
+          # continue
+        # render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
 
     if dl.itt % export_steps == 0:
       name = fn.name()
@@ -76,7 +77,7 @@ def main():
 
   colors = {
     'back': [1,1,1,1],
-    'front': [0,0,0,0.1],
+    'front': [0,0,0,0.4],
     'cyan': [0,0.6,0.6,0.3],
     'red': [0.7,0.0,0.0,0.3],
     'light': [0,0,0,0.2],
@@ -84,16 +85,16 @@ def main():
 
   threads = 512
 
-  render_steps = 20
-  export_steps = 20
+  render_steps = 2
+  export_steps = 2
 
-  size = 512*2
+  size = 512
   one = 1.0/size
 
-  node_rad = 2*one
+  node_rad = 4*one
 
-  area_rad = 10*node_rad
-  sources_rad = 2*node_rad
+  area_rad = 5*node_rad
+  sources_rad = 1*node_rad
   stp = node_rad*0.5
   kill_rad = node_rad
 
