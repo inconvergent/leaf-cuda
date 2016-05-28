@@ -118,64 +118,64 @@ class Leaf(object):
     self.vnum = len(veins)
     self.vxy = veins.astype(npfloat)
 
-  def __grow(self, sxy, vxy, sv):
-
-    print(sv)
-
-  def step(self, t=None):
+  def __make_zonemap(self):
 
     from pycuda.driver import In
     from pycuda.driver import Out
     from pycuda.driver import InOut
 
-    self.itt += 1
-
-    snum = self.snum
-    vnum = self.vnum
-    sxy = self.sxy
     vxy = self.vxy
-
-    sv = self.sv
-    tmp = self.tmp
+    vnum = self.vnum
 
     zone_num = self.zone_num
+    zone_node = self.zone_node
+    zone = self.zone
 
-    self.zone_num[:] = 0
+    zone_num[:] = 0
 
     self.cuda_agg_count(
       npint(vnum),
       npint(self.nz),
       In(vxy[:vnum,:]),
-      InOut(self.zone_num),
+      InOut(zone_num),
       block=(self.threads,1,1),
       grid=(vnum//self.threads + 1,1)
     )
 
-    zone_leap = self.zone_num[:].max()
+    zone_leap = zone_num[:].max()
     zone_map_size = self.nz2*zone_leap
 
-    if zone_map_size>len(self.zone_node):
+    if zone_map_size>len(zone_node):
       print('resize, new zone leap: ', zone_map_size*2./self.nz2)
-      self.zone_node = zeros(zone_map_size*2, npint)
+      zone_node = zeros(zone_map_size*2, npint)
 
-    self.zone_node[:] = 0
-    self.zone_num[:] = 0
+    zone_node[:] = 0
+    zone_num[:] = 0
 
     self.cuda_agg(
       npint(vnum),
       npint(self.nz),
       npint(zone_leap),
       In(vxy[:vnum,:]),
-      InOut(self.zone_num),
-      InOut(self.zone_node),
-      Out(self.zone[:vnum]),
+      InOut(zone_num),
+      InOut(zone_node),
+      Out(zone[:vnum]),
       block=(self.threads,1,1),
       grid=(vnum//self.threads + 1,1)
     )
 
-    # print('zone_num', self.nz)
-    # print('zone_node max', self.zone_node.max())
-    # print('zone',self.zone[:vnum])
+    return zone_leap, zone_node, zone_num
+
+  def __nn_query(self, zone_leap, zone_node, zone_num):
+
+    from pycuda.driver import In
+    from pycuda.driver import Out
+
+    snum = self.snum
+    vnum = self.vnum
+
+    sv = self.sv[:snum]
+    tmp = self.tmp[:snum]
 
     self.cuda_nn(
       npint(self.nz),
@@ -185,16 +185,26 @@ class Leaf(object):
       In(self.zone_node),
       npint(snum),
       npint(vnum),
-      In(sxy[:snum,:]),
-      In(vxy[:vnum,:]),
-      Out(sv[:snum]),
-      Out(tmp[:snum]),
+      In(self.sxy[:snum,:]),
+      In(self.vxy[:vnum,:]),
+      Out(sv),
+      Out(tmp),
       block=(self.threads,1,1),
       grid=(snum//self.threads + 1,1)
     )
 
-    print('snum', snum)
-    print('vnum', vnum)
+    return sv, tmp
 
-    # self.__grow(sxy, vxy, sv[:vnum])
+  def __grow(self, sxy, vxy, sv):
+
+    print(sv)
+
+  def step(self, t=None):
+
+    self.itt += 1
+
+    zone_leap, zone_node, zone_num = self.__make_zonemap()
+    sv, dst = self.__nn_query(zone_leap, zone_node, zone_num)
+
+    return zone_leap, zone_node, zone_num, sv, dst
 

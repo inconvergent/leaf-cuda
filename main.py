@@ -21,7 +21,7 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
 
   def wrap(render):
 
-    dl.step()
+    zone_leap, zone_node, zone_num, sv, svdst = dl.step()
 
     if dl.itt % render_steps == 0:
 
@@ -30,8 +30,6 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
 
       sxy = dl.sxy[:snum,:]
       vxy = dl.vxy[:vnum,:]
-      sv = dl.sv[:snum]
-      tmp = dl.tmp[:snum]
 
       print('itt', dl.itt, 'snum', snum, 'vnum', vnum, 'time', time()-t0)
 
@@ -39,9 +37,9 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
       render.set_line_width(dl.one)
 
       # sources
-      # render.set_front(colors['red'])
-      # for x,y in sxy:
-        # render.circle(x, y, 2*dl.one, fill=True)
+      render.set_front(colors['front'])
+      for x,y in sxy:
+        render.circle(x, y, 2*dl.one, fill=True)
 
       # veins
       render.set_front(colors['front'])
@@ -49,18 +47,22 @@ def get_wrap(dl, colors, render_steps=10, export_steps=10):
         render.circle(x, y, 3*dl.one, fill=True)
 
       # nearby
+      warnings = 0
+      oks = 0
       render.set_front(colors['red'])
       for s in xrange(snum):
         v = sv[s]
         if v<0 or s<0:
-          print('WARNING: v', v, 's', s)
+          # print('WARNING: v', v, 's', s)
+          warnings += 1
           continue
         render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
-        print('OK: v', v, 's', s)
+        oks += 1
 
-      print(tmp)
-      print(sv, (sv>-1).sum(), len(sv))
-      print(dl.nz, dl.rad)
+      print('snum: ', snum)
+      print('vnum: ', vnum)
+      print('WARNING: ', warnings)
+      print('OK: ', oks)
 
     # if dl.itt % export_steps == 0:
       name = fn.name()
@@ -98,11 +100,11 @@ def main():
   one = 1.0/size
 
   rad = 0.1
-  sources_dst = rad*0.01
+  sources_dst = rad*0.1
 
   init_sources = 20000
   # init_veins = array([[0.5,0.5], [0.1,0.1]])
-  init_veins = random((1000,2))
+  init_veins = random((10,2))
 
   stp = one*0.4
 
