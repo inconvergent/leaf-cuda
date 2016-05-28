@@ -19,6 +19,7 @@ __global__ void Growth(
   const int v_count = vs_counts[v];
   const int start = vs_ind[v];
 
+
   if (v_count<1){
     vec[vv] = -100.0f;
     vec[vv+1] = -100.0f;
@@ -26,7 +27,7 @@ __global__ void Growth(
   }
 
   int ss;
-  float dd;
+  float dd = 1.0f;
   float dx;
   float dy;
 
@@ -38,16 +39,11 @@ __global__ void Growth(
     dx = sxy[ss] - vxy[vv];
     dy = sxy[ss+1] - vxy[vv+1];
     dd = sqrt(dx*dx + dy*dy);
-
     gx += dx/dd;
     gy += dy/dd;
-
   }
 
   dd = sqrt(gx*gx+gy*gy);
-  gx /= dd;
-  gy /= dd;
-
-  vec[vv] = gx;
-  vec[vv+1] = gy;
+  vec[vv] = gx/dd;
+  vec[vv+1] = gy/dd;
 }

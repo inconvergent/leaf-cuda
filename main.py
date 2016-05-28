@@ -98,16 +98,16 @@ def main():
   size = 512*2
   one = 1.0/size
 
-  node_rad = 4*one
+  node_rad = 10*one
 
   area_rad = 10*node_rad
   sources_rad = 2*node_rad
   stp = node_rad*0.5
-  kill_rad = node_rad*2
+  kill_rad = node_rad*4
 
-  init_sources = 20000
+  init_sources = 5000
   # init_veins = array([[0.5,0.5], [0.1,0.1]])
-  init_veins = random((3,2))
+  init_veins = random((1,2))
 
 
   DL = Leaf(
