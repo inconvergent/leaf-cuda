@@ -16,7 +16,7 @@ PI = pi
 
 
 
-class Leaf(object):
+class LeafOpen(object):
 
   def __init__(
       self,

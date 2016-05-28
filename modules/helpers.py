@@ -17,26 +17,11 @@ def load_kernel(fn, name, subs={}):
   mod = SourceModule(kernel)
   return mod.get_function(name)
 
-def link_sort(links):
+def show_open(render, snum, sxy, vxy, sv):
 
-  curr = links[0,0]
-  first = curr
-  order = [first]
+  for s in xrange(snum):
+    v = sv[s]
+    if v<0 or s<0:
+      continue
+    render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
 
-  while True:
-
-    a = links[curr,0]
-    b = links[curr,1]
-
-    if a != curr:
-      curr = a
-    else:
-      curr = b
-
-    order.append(curr)
-
-    if curr == first:
-      order.append(a)
-      break
-
-  return order
