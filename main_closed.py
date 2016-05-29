@@ -48,9 +48,9 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
         render.circle(x, y, l.one, fill=True)
 
       # # sources
-      # render.set_front(colors['cyan'])
-      # for x,y in sxy:
-        # render.circle(x, y, l.one, fill=True)
+      render.set_front(colors['cyan'])
+      for x,y in sxy:
+        render.circle(x, y, l.one, fill=True)
 
       # # nearby
       # render.set_front(colors['front'])
@@ -99,7 +99,7 @@ def main():
   # init_veins = 0.2+0.6*random((10,2))
   init_veins = array([[0.5]*2])
 
-  init_num_sources = 10000
+  init_num_sources = 1000
 
   # from dddUtils.random import darts
   # init_sources = darts(init_num_sources, 0.5, 0.5, 0.45, sources_rad)
@@ -116,6 +116,8 @@ def main():
     sources_rad,
     threads = threads
   )
+  print('nz', L.nz)
+  print('dens', L.sv_leap)
 
   wrap = get_wrap(
     L,
