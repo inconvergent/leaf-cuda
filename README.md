@@ -11,6 +11,7 @@ http://pages.cpsc.ucalgary.ca/~federl/Publications/Siggraph-2005/
 In order for this code to run you must first download and install:
 
 *    `render`: https://github.com/inconvergent/render
+*    `dddUtils`: https://github.com/inconvergent/ddd-utils
 *    `fn`: https://github.com/inconvergent/fn
 
 ## Other Dependencies
