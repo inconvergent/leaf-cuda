@@ -16,7 +16,7 @@ PI = pi
 
 
 
-class LeafOpen(object):
+class LeafClosed(object):
 
   def __init__(
       self,
@@ -28,7 +28,7 @@ class LeafOpen(object):
       kill_rad,
       sources_rad,
       threads = 256,
-      nmax = 1000000
+      nmax = 10000000
     ):
 
     self.itt = 0
@@ -43,12 +43,12 @@ class LeafOpen(object):
     self.stp = stp
 
     self.sources_rad = sources_rad
-    self.max_descendants = 3
 
     self.__init()
     self.__init_sources(init_sources)
     self.__init_veins(init_veins)
     self.__cuda_init()
+    self.sv_leap = 50*int(self.snum/self.nz2)
 
   def __init(self):
 
@@ -61,18 +61,23 @@ class LeafOpen(object):
     self.nz2 = self.nz**2
     nmax = self.nmax
 
-    self.sxy = zeros((nmax, 2), npfloat)
-    self.vxy = zeros((nmax, 2), npfloat)
-    self.vec = zeros((nmax, 2), npfloat)
-    self.sv = zeros(nmax, npint)
-    self.num_descendants = zeros(nmax, npint)
-    self.dst = zeros(nmax, npfloat)
-    self.zone = zeros(nmax, npint)
+    self.sxy = zeros((nmax,2), npfloat)
+    self.parents = []
+    self.children = []
+    self.vxy = zeros((nmax,2), npfloat)
+    self.vec = zeros((nmax,2), npfloat)
 
+    self.sv = zeros(nmax, npint)
+    self.sv_num = zeros(nmax, npint)
+
+    self.dst = zeros(nmax, npfloat)
+
+    self.zone = zeros(nmax, npint)
     zone_map_size = self.nz2*64
     self.zone_node = zeros(zone_map_size, npint)
 
     self.zone_num = zeros(self.nz2, npint)
+
 
   def __cuda_init(self):
 
@@ -91,9 +96,9 @@ class LeafOpen(object):
       subs = {'_THREADS_': self.threads}
     )
 
-    self.cuda_nn = load_kernel(
-      'modules/cuda/nn.cu',
-      'NN',
+    self.cuda_rnn = load_kernel(
+      'modules/cuda/rnn.cu',
+      'RNN',
       subs = {'_THREADS_': self.threads}
     )
 
@@ -162,36 +167,51 @@ class LeafOpen(object):
 
     return zone_leap, self.zone_node, zone_num
 
-  def __nn_query(self, zone_leap, zone_node, zone_num):
+  def __rnn_query(self, zone_leap, zone_node, zone_num):
 
     from pycuda.driver import In
+    from pycuda.driver import InOut
     from pycuda.driver import Out
 
     snum = self.snum
     vnum = self.vnum
 
-    sv = self.sv[:snum]
-    dst = self.dst[:snum]
 
-    self.cuda_nn(
+    sv_leap = self.sv_leap
+    sv = self.sv[:snum*sv_leap]
+    sv_num = self.sv_num[:snum*sv_leap]
+    dst = self.dst[:snum*sv_leap]
+
+
+    sv_num[:] = 0
+    sv[:] = -5
+    dst[:] = -10.0
+
+    self.cuda_rnn(
       npint(self.nz),
       npfloat(self.area_rad),
       npint(zone_leap),
+      npint(sv_leap),
       In(zone_num),
       In(zone_node),
       npint(snum),
       npint(vnum),
       In(self.sxy[:snum,:]),
       In(self.vxy[:vnum,:]),
-      Out(sv),
-      Out(dst),
+      InOut(sv_num),
+      InOut(sv),
+      InOut(dst),
       block=(self.threads,1,1),
       grid=(snum//self.threads + 1,1)
     )
 
-    return sv, dst
+    # print('sv', sv[:snum], (sv[:snum]>-1).sum())
+    # print('sv_num',sv_num[:snum])
+    # print('dst',dst[:snum])
 
-  def __get_vs(self, sv):
+    return sv_num, sv, dst
+
+  def __get_vs(self, sv_num, sv):
 
     ## TODO: write as kernel?
 
@@ -202,24 +222,29 @@ class LeafOpen(object):
 
     first = itemgetter(0)
 
+    sv_leap = self.sv_leap
+    ma = sv_num[:self.snum*sv_leap].max()
+    assert  ma<sv_leap, 'sv_num exceeds sv_leap: {:d} {:d}'.format(ma, sv_leap)
+
     vs_dict = defaultdict(list)
-    vs_counts = zeros(self.vnum, npint)
+    vs_num = zeros(self.vnum, npint)
 
-    for s,v in enumerate(sv):
-      if s<0 or v<0:
-        continue
-      vs_dict[v].append(s)
-      vs_counts[v] += 1
+    for s in xrange(self.snum):
+      for k in xrange(sv_num[s]):
+        v = sv[s*sv_leap+k]
+        if v<0:
+          continue
+        vs_dict[v].append(s)
+        vs_num[v] += 1
 
-    vs_tuples = [(k,v) for k,v in vs_dict.iteritems()]
-    vs_tuples = sorted(vs_tuples, key=first)
+    vs_tuples = sorted(vs_dict.iteritems(), key=first)
 
     vs_map = concatenate([b for _,b in vs_tuples]).astype(npint)
-    vs_ind = cumsum(concatenate([[0],vs_counts])).astype(npint)
+    vs_ind = cumsum(concatenate([[0],vs_num])).astype(npint)
 
-    return vs_tuples, vs_map, vs_ind, vs_counts
+    return vs_dict, vs_map, vs_ind, vs_num
 
-  def __growth(self, vs_map, vs_ind, vs_counts):
+  def __growth(self, zone_leap, zone_num, zone_node, vs_map, vs_ind, vs_counts):
 
     from pycuda.driver import In
     from pycuda.driver import InOut
@@ -228,17 +253,24 @@ class LeafOpen(object):
     snum = self.snum
     vec = self.vec[:vnum,:]
 
-    max_descendants = self.max_descendants
-    num_descendants = self.num_descendants[:vnum]
-
     stp = self.stp
+    kill_rad = self.kill_rad
 
     sxy = self.sxy[:snum, :]
     vxy = self.vxy[:vnum, :]
 
     vec[:,:] = -99.0
 
+    parents = []
+    children = []
+
     self.cuda_growth(
+      npint(self.nz),
+      npfloat(kill_rad),
+      npfloat(stp),
+      npint(zone_leap),
+      In(zone_num),
+      In(zone_node),
       In(vs_map),
       In(vs_ind),
       In(vs_counts),
@@ -260,24 +292,53 @@ class LeafOpen(object):
         warnings += 1
         continue
 
-      if num_descendants[i]>max_descendants:
-        continue
+      parents.append(i)
+      children.append(vnum+count)
 
-      self.vxy[vnum+count,:] = self.vxy[i,:] + stp*gv
-      num_descendants[i] += 1
+      self.vxy[vnum+count,:] = gv
       count += 1
       abort = False
+
+    self.parents = parents
+    self.children = children
 
     self.vnum += count
 
     return not abort
 
-  def __source_death(self, sv, dst):
+  def __alive_sources(self, sv_num, sv, dst):
 
-    inds = (dst>self.kill_rad).nonzero()[0]
+    from numpy import ones
+
+    sv_leap = self.sv_leap
+    kill_rad = self.kill_rad
+
+    mask = ones(self.snum)
+
+    for s in xrange(self.snum):
+
+      ## TODO: this can be vectorized
+
+      near = 0
+      for k in xrange(sv_num[s]):
+        v = sv[s*sv_leap+k]
+        if v<0:
+          continue
+
+        dd = dst[s*sv_leap+k]
+        if dd<kill_rad:
+          near += 1
+          # mask[s] = 0
+          # break
+
+      if (sv_num[s]>0) and (near >= sv_num[s]):
+        mask[s] = 0
+
+    inds = mask.nonzero()[0]
     alive = len(inds)
     self.sxy[:alive,:] = self.sxy[inds,:]
     self.snum = alive
+    return self.snum>0
 
   def step(self, show=None):
 
@@ -286,17 +347,22 @@ class LeafOpen(object):
       self.itt += 1
 
       zone_leap, zone_node, zone_num = self.__make_zonemap()
-      sv, dst = self.__nn_query(zone_leap, zone_node, zone_num)
+      sv_num, sv, dst = self.__rnn_query(zone_leap, zone_node, zone_num)
 
-      # sv is out of sync after __source_death is called
-      yield sv
+      # sv, sv_num is out of sync after __source_death is called
 
-      _, vs_map, vs_ind, vs_counts = self.__get_vs(sv)
-      if not self.__growth(vs_map, vs_ind, vs_counts):
+      vs_dict, vs_map, vs_ind, vs_num = self.__get_vs(sv_num, sv)
+      if not self.__growth(zone_leap, zone_num, zone_node, vs_map, vs_ind, vs_num):
         return
 
-      self.__source_death(sv, dst)
+      yield vs_dict
 
-      if self.snum<1:
+      if not self.__alive_sources(sv_num, sv, dst):
         return
+
+      # ma = self.sv_num[:self.snum*self.sv_leap].max()
+      # if ma>self.sv_leap*0.5:
+        # self.sv_leap *= 2
+        # print('resize, new sv_leap: ', self.sv_leap)
+        # # assert  ma<sv_leap, 'sv_num exceeds sv_leap: {:d} {:d}'.format(ma, sv_leap)
 

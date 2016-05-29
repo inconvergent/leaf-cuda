@@ -1,10 +1,10 @@
 #define THREADS _THREADS_
 
-__device__ float dist(float *a, float *b, int ii, int jj){
+__device__ float dist(const float *a, const float *b, const int ii, const int jj){
     return sqrt(powf(a[ii]-b[jj], 2.0f)+powf(a[ii+1]-b[jj+1], 2.0f));
 }
 
-__device__ int calc_zones(int za, int zb, int nz, int *Z){
+__device__ int calc_zones(const int za, const int zb, const int nz, int *Z){
   int num = 0;
   for (int a=max(za-1,0);a<min(za+2,nz);a++){
     for (int b=max(zb-1,0);b<min(zb+2,nz);b++){
@@ -16,16 +16,16 @@ __device__ int calc_zones(int za, int zb, int nz, int *Z){
 }
 
 __device__ bool is_relative(
-  int ZN,
-  int *Z,
-  int zone_leap,
-  int *zone_num,
-  int *zone_node,
-  float rad,
-  float *sxy,
-  float *vxy,
-  int ss,
-  int vv
+  const int ZN,
+  const int *Z,
+  const int zone_leap,
+  const int *zone_num,
+  const int *zone_node,
+  const float rad,
+  const float *sxy,
+  const float *vxy,
+  const int ss,
+  const int vv
 ){
 
   int uu;
@@ -50,16 +50,16 @@ __device__ bool is_relative(
 }
 
 __global__ void RNN(
-  int nz,
-  float rad,
-  int zone_leap,
-  int sv_leap,
-  int *zone_num,
-  int *zone_node,
-  int snum,
-  int vnum,
-  float *sxy,
-  float *vxy,
+  const int nz,
+  const float rad,
+  const int zone_leap,
+  const int sv_leap,
+  const int *zone_num,
+  const int *zone_node,
+  const int snum,
+  const int vnum,
+  const float *sxy,
+  const float *vxy,
   int *sv_num,
   int *sv,
   float *dst

@@ -25,3 +25,9 @@ def show_open(render, snum, sxy, vxy, sv):
       continue
     render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
 
+def show_closed(render, sxy, vxy, vs_dict):
+
+  for v,ss in vs_dict.iteritems():
+    for s in ss:
+      render.line(sxy[s,0], sxy[s,1], vxy[v,0], vxy[v,1])
+

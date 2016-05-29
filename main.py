@@ -10,7 +10,8 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
 
   from time import time
   from time import strftime
-  # from modules.helpers import show_closed
+  from numpy import pi
+  from modules.helpers import show_closed
   from numpy.random import random
 
   t0 = time()
@@ -21,13 +22,14 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
   rndcolors = random((l.nz2,3))
   rndcolors[:,0] *= 0.1
   step = l.step()
+  one = l.one
 
   def wrap(render):
 
     final = False
 
     try:
-      step.next()
+      vs_dict = step.next()
     except StopIteration:
       final = True
 
@@ -39,24 +41,38 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
       sxy = l.sxy[:snum,:]
       vxy = l.vxy[:vnum,:]
 
+      zsize = len(l.zone_node)
       print(strftime("%Y-%m-%d %H:%M:%S"), 'itt', l.itt,
-          'snum', snum, 'vnum', vnum, 'time', time()-t0)
+          'snum', snum, 'vnum', vnum, 'zone', zsize, 'time', time()-t0)
 
       render.clear_canvas()
+      r = one*10
 
       # veins
       render.set_front(colors['front'])
-      for x,y in vxy:
-        render.circle(x, y, l.one, fill=True)
+      for i,(x,y) in enumerate(vxy):
+        render.circle(x, y, r, fill=True)
+        # render.ctx.arc(x,y,r,0,pi*(1.+random()))
+        # render.ctx.fill()
+
+      render.set_front(colors['red'])
+      for i in l.parents:
+        x,y = vxy[i,:]
+        render.circle(x, y, 0.5*r, fill=True)
+
+      render.set_front(colors['blue'])
+      for i in l.children:
+        x,y = vxy[i,:]
+        render.circle(x, y, 0.5*r, fill=True)
 
       # # sources
       render.set_front(colors['cyan'])
       for x,y in sxy:
-        render.circle(x, y, l.one, fill=True)
+        render.circle(x, y, 0.5*r, fill=True)
 
       # # nearby
-      # render.set_front(colors['front'])
-      # show_closed(render, snum, sxy, vxy, sv)
+      render.set_front(colors['front'])
+      show_closed(render, sxy, vxy, vs_dict)
 
     if (l.itt % export_steps == 0) or final:
       name = fn.name()
@@ -64,6 +80,8 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
 
     if final:
       return False
+
+    raw_input()
 
     return True
 
@@ -73,37 +91,38 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
 
 def main():
 
-  from modules.leaf_closed import LeafClosed as Leaf
+  from modules.leaf import LeafClosed as Leaf
   from render.render import Animate
   from numpy.random import random
   from numpy import array
 
   colors = {
     'back': [1,1,1,1],
-    'front': [0,0,0,0.7],
+    'front': [0,0,0,0.1],
     'cyan': [0,0.6,0.6,0.3],
     'red': [0.7,0.0,0.0,0.3],
+    'blue': [0.0,0.0,0.7,0.3],
     'light': [0,0,0,0.2],
   }
 
   threads = 512
 
-  render_steps = 50
-  export_steps = 50
+  render_steps = 1
+  export_steps = 2000
 
   size = 1024
   one = 1.0/size
 
-  node_rad = 3*one
+  node_rad = 20*one
 
   area_rad = 5*node_rad
-  sources_rad = 1.5*node_rad
-  stp = node_rad*0.5
-  kill_rad = node_rad*0.9
+  sources_rad = 2*node_rad
+  stp = node_rad
+  kill_rad = node_rad
 
-  init_num_sources = 20
-  init_veins = 0.2+0.6*random((init_num_sources,2))
-  # init_veins = array([[0.5]*2])
+  # init_num_sources = 4
+  # init_veins = 0.2+0.6*random((init_num_sources,2))
+  init_veins = array([[0.5]*2])
 
   init_num_sources = 50000
 

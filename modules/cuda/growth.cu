@@ -1,12 +1,18 @@
 #define THREADS _THREADS_
 
 __global__ void Growth(
-  int *vs_map,
-  int *vs_ind,
-  int *vs_counts,
-  float *sxy,
-  float *vxy,
-  int vnum,
+  const int nz,
+  const float rad,
+  const float stp,
+  const int zone_leap,
+  const int *zone_num,
+  const int *zone_node,
+  const int *vs_map,
+  const int *vs_ind,
+  const int *vs_counts,
+  const float *sxy,
+  const float *vxy,
+  const int vnum,
   float *vec
 ){
   const int v = blockIdx.x*THREADS + threadIdx.x;
@@ -26,25 +32,62 @@ __global__ void Growth(
   }
 
   int ss;
-  float gx;
-  float gy;
-  float dd;
+  float gx = 0.0f;
+  float gy = 0.0f;
 
-  float mx = 0.0f;
-  float my = 0.0f;
-  int count = 0;
+  float dx = 0.0f;
+  float dy = 0.0f;
+  float dd = 0.0f;
 
   for (int k=0; k<v_count; k++){
     ss = 2*vs_map[start + k];
-    mx += sxy[ss];
-    my += sxy[ss+1];
-    count += 1;
+    dx = sxy[ss]-vxy[vv];
+    dy = sxy[ss+1]-vxy[vv+1];
+    dd = sqrt(dx*dx+dy*dy);
+    gx += dx/dd;
+    gy += dy/dd;
   }
 
-  gx = mx/(float)count-vxy[vv];
-  gy = my/(float)count-vxy[vv+1];
   dd = sqrt(gx*gx+gy*gy);
+  gx /= dd;
+  gy /= dd;
 
-  vec[vv] = gx/dd;
-  vec[vv+1] = gy/dd;
+  // test if new node collides with previous nodes
+  int cand;
+  const float tx = vxy[vv]+gx*stp;
+  const float ty = vxy[vv+1]+gy*stp;
+  const int za = (int)floor(tx*nz);
+  const int zb = (int)floor(ty*nz);
+  int z;
+  float mi = 99999.0f;
+
+  for (int a=max(za-1,0);a<min(za+2,nz);a++){
+    for (int b=max(zb-1,0);b<min(zb+2,nz);b++){
+      z = a*nz+b;
+      for (int k=0;k<zone_num[z];k++){
+
+        cand = 2*zone_node[z*zone_leap+k];
+
+        if (cand==vv){
+          continue;
+        }
+
+        dd = sqrt(powf(vxy[cand]-tx, 2.0f)+
+                  powf(vxy[cand+1]-ty,2.0f));
+
+        if (dd<mi){
+          mi = dd;
+        }
+      }
+    }
+  }
+
+  if (mi>rad){
+    vec[vv] = tx;
+    vec[vv+1] = ty;
+  }
+  else{
+    vec[vv] = -100.0f;
+    vec[vv+1] = -100.0f;
+  }
 }
