@@ -1,9 +1,9 @@
 #define THREADS _THREADS_
 
 __global__ void agg_count(
-  int n,
-  int nz,
-  float *xy,
+  const int n,
+  const int nz,
+  const float *xy,
   int *zone_num
 ){
   const int i = blockIdx.x*THREADS + threadIdx.x;
@@ -17,6 +17,6 @@ __global__ void agg_count(
   const int zj = (int) floor(xy[ii+1]*nz);
   const int z = zi*nz + zj;
 
-  const int o = atomicAdd(&zone_num[z], 1);
+  atomicAdd(&zone_num[z], 1);
 }
 
