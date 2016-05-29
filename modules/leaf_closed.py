@@ -28,7 +28,7 @@ class LeafClosed(object):
       kill_rad,
       sources_rad,
       threads = 256,
-      nmax = 1000000
+      nmax = 10000000
     ):
 
     self.itt = 0
@@ -313,6 +313,8 @@ class LeafClosed(object):
     for s in xrange(self.snum):
 
       ## TODO: this can be vectorized
+
+      near = 0
       for k in xrange(sv_num[s]):
         v = sv[s*sv_leap+k]
         if v<0:
@@ -320,11 +322,14 @@ class LeafClosed(object):
 
         dd = dst[s*sv_leap+k]
         if dd<kill_rad:
-          mask[s] = 0
-          break
+          near += 1
+          # mask[s] = 0
+          # break
+
+      if (sv_num[s]>0) and (near >= sv_num[s]):
+        mask[s] = 0
 
     inds = mask.nonzero()[0]
-    # print(inds)
     alive = len(inds)
     self.sxy[:alive,:] = self.sxy[inds,:]
     self.snum = alive

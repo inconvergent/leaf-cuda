@@ -30,9 +30,8 @@ __device__ bool is_relative(
 
   int uu;
   int z;
-  float dd;
 
-  dd = dist(sxy, vxy, ss, vv);
+  float dd = dist(sxy, vxy, ss, vv);
   if (dd>rad){
     return false;
   }
@@ -41,7 +40,6 @@ __device__ bool is_relative(
     z = Z[zk];
     for (int k=0;k<zone_num[z];k++){
       uu = 2*zone_node[z*zone_leap+k];
-
       if (dd>max(dist(sxy, vxy, ss, uu), dist(vxy, vxy, vv, uu))){
         return false;
       }
@@ -81,7 +79,7 @@ __global__ void RNN(
 
   int v = -4;
   int vv = -8;
-  int z = 33;
+  int z;
 
   bool relative;
   int count = 0;

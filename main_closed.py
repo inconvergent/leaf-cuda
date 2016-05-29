@@ -83,13 +83,13 @@ def main():
 
   threads = 512
 
-  render_steps = 1
-  export_steps = 1
+  render_steps = 50
+  export_steps = 50
 
-  size = 512
+  size = 1024
   one = 1.0/size
 
-  node_rad = 7*one
+  node_rad = 3*one
 
   area_rad = 5*node_rad
   sources_rad = 1*node_rad
@@ -99,7 +99,7 @@ def main():
   # init_veins = 0.2+0.6*random((10,2))
   init_veins = array([[0.5]*2])
 
-  init_num_sources = 1000
+  init_num_sources = 50000
 
   # from dddUtils.random import darts
   # init_sources = darts(init_num_sources, 0.5, 0.5, 0.45, sources_rad)
