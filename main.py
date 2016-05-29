@@ -50,24 +50,24 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       # veins
       render.set_front(colors['front'])
       for i,(x,y) in enumerate(vxy):
-        if i in l.children:
-          continue
+        # if i in l.children:
+          # continue
         render.circle(x, y, r, fill=True)
 
-      render.set_front(colors['cyan'])
-      for i in l.children:
-        x,y = vxy[i,:]
-        render.circle(x, y, r, fill=True)
+      # render.set_front(colors['cyan'])
+      # for i in l.children:
+        # x,y = vxy[i,:]
+        # render.circle(x, y, r, fill=True)
 
-      # # sources
-      render.set_front(colors['red'])
-      for x,y in sxy:
-        render.circle(x, y, 0.5*r, fill=True)
+      # # # sources
+      # render.set_front(colors['red'])
+      # for x,y in sxy:
+        # render.circle(x, y, 0.5*r, fill=True)
 
-      # # nearby
-      if vs_dict:
-        render.set_front(colors['front'])
-        show_closed(render, sxy, vxy, vs_dict)
+      # # # nearby
+      # if vs_dict:
+        # render.set_front(colors['front'])
+        # show_closed(render, sxy, vxy, vs_dict)
 
     if (l.itt % export_steps == 0) or final:
       name = fn.name()
@@ -98,24 +98,24 @@ def main():
     'light': [0,0,0,0.2],
   }
 
-  threads = 512
+  threads = 256
 
-  render_steps = 1
-  export_steps = 1
+  render_steps = 50
+  export_steps = 50
 
-  size = 512
+  size = 1024
   one = 1.0/size
 
-  node_rad = 10.0*one
+  node_rad = 3.0*one
 
   area_rad = 5*node_rad
   sources_rad = 2*node_rad
   stp = node_rad
   kill_rad = node_rad
 
-  init_num_sources = 4
+  # init_num_sources = 4
   # init_veins = 0.2+0.6*random((init_num_sources,2))
-  init_veins = array([[0.15, 0.15], [0.85, 0.85]])
+  init_veins = array([[0.2, 0.2], [0.8, 0.8]])
 
   init_num_sources = 100000
 
