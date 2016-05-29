@@ -28,7 +28,7 @@ class LeafClosed(object):
       kill_rad,
       sources_rad,
       threads = 256,
-      nmax = 10000000
+      nmax = 100000000
     ):
 
     self.itt = 0
