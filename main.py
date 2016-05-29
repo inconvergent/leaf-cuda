@@ -6,7 +6,7 @@ from __future__ import print_function
 from __future__ import division
 
 
-def get_wrap(l, colors, render_steps=10, export_steps=10):
+def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
 
   from time import time
   from time import strftime
@@ -27,6 +27,7 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
   def wrap(render):
 
     final = False
+    vs_dict = None
 
     try:
       vs_dict = step.next()
@@ -46,33 +47,34 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
           'snum', snum, 'vnum', vnum, 'zone', zsize, 'time', time()-t0)
 
       render.clear_canvas()
-      r = one*10
+      r = node_rad*0.5
 
       # veins
       render.set_front(colors['front'])
       for i,(x,y) in enumerate(vxy):
+        if i in l.children:
+          continue
         render.circle(x, y, r, fill=True)
-        # render.ctx.arc(x,y,r,0,pi*(1.+random()))
-        # render.ctx.fill()
 
-      render.set_front(colors['red'])
-      for i in l.parents:
-        x,y = vxy[i,:]
-        render.circle(x, y, 0.5*r, fill=True)
+      # render.set_front(colors['red'])
+      # for i in l.parents:
+        # x,y = vxy[i,:]
+        # render.circle(x, y, 0.5*r, fill=True)
 
-      render.set_front(colors['blue'])
+      render.set_front(colors['cyan'])
       for i in l.children:
         x,y = vxy[i,:]
-        render.circle(x, y, 0.5*r, fill=True)
+        render.circle(x, y, r, fill=True)
 
       # # sources
-      render.set_front(colors['cyan'])
+      render.set_front(colors['red'])
       for x,y in sxy:
         render.circle(x, y, 0.5*r, fill=True)
 
       # # nearby
-      render.set_front(colors['front'])
-      show_closed(render, sxy, vxy, vs_dict)
+      if vs_dict:
+        render.set_front(colors['front'])
+        show_closed(render, sxy, vxy, vs_dict)
 
     if (l.itt % export_steps == 0) or final:
       name = fn.name()
@@ -80,8 +82,6 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
 
     if final:
       return False
-
-    raw_input()
 
     return True
 
@@ -98,22 +98,22 @@ def main():
 
   colors = {
     'back': [1,1,1,1],
-    'front': [0,0,0,0.1],
-    'cyan': [0,0.6,0.6,0.3],
-    'red': [0.7,0.0,0.0,0.3],
-    'blue': [0.0,0.0,0.7,0.3],
+    'front': [0,0,0,0.6],
+    'cyan': [0,0.6,0.6,0.8],
+    'red': [0.7,0.0,0.0,0.8],
+    'blue': [0.0,0.0,0.7,0.8],
     'light': [0,0,0,0.2],
   }
 
   threads = 512
 
   render_steps = 1
-  export_steps = 2000
+  export_steps = 1
 
-  size = 1024
+  size = 512
   one = 1.0/size
 
-  node_rad = 20*one
+  node_rad = 10*one
 
   area_rad = 5*node_rad
   sources_rad = 2*node_rad
@@ -147,6 +147,7 @@ def main():
   wrap = get_wrap(
     L,
     colors,
+    node_rad=node_rad,
     export_steps=export_steps,
     render_steps=render_steps
   )

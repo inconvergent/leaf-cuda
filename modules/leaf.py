@@ -62,8 +62,6 @@ class LeafClosed(object):
     nmax = self.nmax
 
     self.sxy = zeros((nmax,2), npfloat)
-    self.parents = []
-    self.children = []
     self.vxy = zeros((nmax,2), npfloat)
     self.vec = zeros((nmax,2), npfloat)
 
@@ -261,8 +259,8 @@ class LeafClosed(object):
 
     vec[:,:] = -99.0
 
-    parents = []
-    children = []
+    parents = set()
+    children = set()
 
     self.cuda_growth(
       npint(self.nz),
@@ -292,8 +290,8 @@ class LeafClosed(object):
         warnings += 1
         continue
 
-      parents.append(i)
-      children.append(vnum+count)
+      parents.add(i)
+      children.add(vnum+count)
 
       self.vxy[vnum+count,:] = gv
       count += 1
