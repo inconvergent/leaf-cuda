@@ -24,12 +24,14 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
 
   def wrap(render):
 
-    try:
-      sv = step.next()
-    except StopIteration:
-      return False
+    final = False
 
-    if l.itt % render_steps == 0:
+    try:
+      step.next()
+    except StopIteration:
+      final = True
+
+    if (l.itt % render_steps == 0) or final:
 
       snum = l.snum
       vnum = l.vnum
@@ -56,9 +58,12 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
       # render.set_front(colors['front'])
       # show_closed(render, snum, sxy, vxy, sv)
 
-    if l.itt % export_steps == 0:
+    if (l.itt % export_steps == 0) or final:
       name = fn.name()
       render.write_to_png(name+'.png')
+
+    if final:
+      return False
 
     return True
 
@@ -92,19 +97,20 @@ def main():
   node_rad = 3*one
 
   area_rad = 5*node_rad
-  sources_rad = 1*node_rad
+  sources_rad = 1.5*node_rad
   stp = node_rad*0.5
-  kill_rad = node_rad
+  kill_rad = node_rad*0.9
 
-  # init_veins = 0.2+0.6*random((10,2))
-  init_veins = array([[0.5]*2])
+  init_num_sources = 20
+  init_veins = 0.2+0.6*random((init_num_sources,2))
+  # init_veins = array([[0.5]*2])
 
   init_num_sources = 50000
 
-  # from dddUtils.random import darts
-  # init_sources = darts(init_num_sources, 0.5, 0.5, 0.45, sources_rad)
-  from dddUtils.random import darts_rect
-  init_sources = darts_rect(init_num_sources, 0.5, 0.5, 0.95, 0.95, sources_rad)
+  from dddUtils.random import darts
+  init_sources = darts(init_num_sources, 0.5, 0.5, 0.45, sources_rad)
+  # from dddUtils.random import darts_rect
+  # init_sources = darts_rect(init_num_sources, 0.5, 0.5, 0.95, 0.95, sources_rad)
 
   L = Leaf(
     size,

@@ -45,14 +45,14 @@ class LeafClosed(object):
     self.sources_rad = sources_rad
 
     # TODO: configurable
-    self.max_descendants = 3
+    self.max_descendants = 4
 
     self.__init()
     self.__init_sources(init_sources)
     self.__init_veins(init_veins)
     self.__cuda_init()
 
-    self.sv_leap = 5*int(self.snum/self.nz2)
+    self.sv_leap = 20*int(self.snum/self.nz2)
 
   def __init(self):
 
@@ -65,9 +65,9 @@ class LeafClosed(object):
     self.nz2 = self.nz**2
     nmax = self.nmax
 
-    self.sxy = zeros((nmax, 2), npfloat)
-    self.vxy = zeros((nmax, 2), npfloat)
-    self.vec = zeros((nmax, 2), npfloat)
+    self.sxy = zeros((nmax,2), npfloat)
+    self.vxy = zeros((nmax,2), npfloat)
+    self.vec = zeros((nmax,2), npfloat)
 
     self.sv = zeros(nmax, npint)
     self.sv_num = zeros(nmax, npint)
