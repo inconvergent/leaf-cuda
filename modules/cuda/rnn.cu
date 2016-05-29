@@ -25,15 +25,15 @@ __device__ bool is_relative(
 ){
 
   int uu;
-  int zk;
+  int z;
   float dd;
   float dx;
   float dy;
 
-  for (int z=0;z<ZN;z++){
-    zk = Z[z];
-    for (int k=0;k<zone_num[zk];k++){
-      uu = 2*zone_node[zk*zone_leap+k];
+  for (int zk=0;zk<ZN;zk++){
+    z = Z[zk];
+    for (int k=0;k<zone_num[z];k++){
+      uu = 2*zone_node[z*zone_leap+k];
 
       dx = sxy[ss]-vxy[vv];
       dy = sxy[ss+1]-vxy[vv+1];
@@ -87,27 +87,50 @@ __global__ void RNN(
   const int zb = (int)floor(sxy[ss+1]*nz);
   const int ZN = calc_zones(za, zb, nz, Z);
 
-  int v;
-  int zk;
+  int v = -4;
+  int z = 33;
 
   bool relative;
-
   int count = 0;
 
-  for (int z=0;z<ZN;z++){
-    zk = Z[z];
-    for (int k=0;k<zone_num[zk];k++){
-      v = zone_node[zk*zone_leap+k];
-      relative = is_relative(ZN, Z, zone_leap, zone_num, zone_node, rad, sxy, vxy, 2*s, 2*v);
+  bool terminate = false;
 
-      if (relative){
+  float dd = -1.0f;
+  float mi = 99999.0f;
+  int r = -3;
 
-        sv[s*sv_leap+count] = v;
-        dst[s*sv_leap+count] = dist(vxy, sxy, v, s);
-        count += 1;
+  for (int zk=0;zk<ZN;zk++){
+    z = Z[zk];
+    for (int k=0;k<zone_num[z];k++){
+      v = zone_node[z*zone_leap+k];
+
+      dd = dist(vxy, sxy, v, s);
+      if (dd>rad){
+        continue;
       }
+
+      if (dd<mi){
+        mi = dd;
+        r = v;
+        count = 1;
+      }
+
+      /*relative = is_relative(ZN, Z, zone_leap, zone_num, zone_node, rad, sxy, vxy, 2*s, 2*v);*/
+      /*if (relative){*/
+        /*sv[s*sv_leap+count] = v;*/
+        /*dst[s*sv_leap+count] = dist(vxy, sxy, v, s);*/
+        /*count += 1;*/
+        /*terminate = true;*/
+        /*break;*/
+      /*}*/
+
+    }
+    if (terminate){
+      break;
     }
   }
 
   sv_num[s] = count;
+  sv[s] = r;
+  dst[s] = dd;
 }

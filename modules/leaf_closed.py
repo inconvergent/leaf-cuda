@@ -43,7 +43,10 @@ class LeafClosed(object):
     self.stp = stp
 
     self.sources_rad = sources_rad
+
+    # TODO: configurable
     self.max_descendants = 3
+    self.sv_leap = 1
 
     self.__init()
     self.__init_sources(init_sources)
@@ -64,11 +67,15 @@ class LeafClosed(object):
     self.sxy = zeros((nmax, 2), npfloat)
     self.vxy = zeros((nmax, 2), npfloat)
     self.vec = zeros((nmax, 2), npfloat)
-    self.sv = zeros(nmax, npint)
-    self.num_descendants = zeros(nmax, npint)
-    self.dst = zeros(nmax, npfloat)
-    self.zone = zeros(nmax, npint)
 
+    self.sv = zeros(nmax, npint)
+    self.sv_num = zeros(nmax, npint)
+
+    self.num_descendants = zeros(nmax, npint)
+
+    self.dst = zeros(nmax, npfloat)
+
+    self.zone = zeros(nmax, npint)
     zone_map_size = self.nz2*64
     self.zone_node = zeros(zone_map_size, npint)
 
@@ -139,6 +146,8 @@ class LeafClosed(object):
     )
 
     zone_leap = zone_num[:].max()
+    print('ZONE_LEAP', zone_leap)
+    print('ZONE_NUM', zone_num)
     zone_map_size = self.nz2*zone_leap
 
     if zone_map_size>len(self.zone_node):
@@ -162,9 +171,10 @@ class LeafClosed(object):
 
     return zone_leap, self.zone_node, zone_num
 
-  def __nn_query(self, zone_leap, zone_node, zone_num):
+  def __rnn_query(self, zone_leap, zone_node, zone_num):
 
     from pycuda.driver import In
+    from pycuda.driver import InOut
     from pycuda.driver import Out
 
     snum = self.snum
@@ -172,24 +182,34 @@ class LeafClosed(object):
 
     sv = self.sv[:snum]
     dst = self.dst[:snum]
+    sv_leap = self.sv_leap
+    sv_num = self.sv_num[:snum*sv_leap]
 
-    self.cuda_nn(
+    sv[:] = 99
+
+    self.cuda_rnn(
       npint(self.nz),
       npfloat(self.area_rad),
       npint(zone_leap),
+      npint(sv_leap),
       In(zone_num),
       In(zone_node),
       npint(snum),
       npint(vnum),
       In(self.sxy[:snum,:]),
       In(self.vxy[:vnum,:]),
-      Out(sv),
+      Out(sv_num),
+      InOut(sv),
       Out(dst),
       block=(self.threads,1,1),
       grid=(snum//self.threads + 1,1)
     )
 
-    return sv, dst
+    print('sv', sv[:snum], (sv[:snum]>-1).sum())
+    print('sv_num',sv_num[:snum])
+    print('dst',dst[:snum])
+
+    return sv, sv_num, dst
 
   def __get_vs(self, sv):
 
@@ -286,7 +306,7 @@ class LeafClosed(object):
       self.itt += 1
 
       zone_leap, zone_node, zone_num = self.__make_zonemap()
-      sv, dst = self.__nn_query(zone_leap, zone_node, zone_num)
+      sv, sv_num, dst = self.__rnn_query(zone_leap, zone_node, zone_num)
 
       # sv is out of sync after __source_death is called
       yield sv
@@ -295,8 +315,7 @@ class LeafClosed(object):
       if not self.__growth(vs_map, vs_ind, vs_counts):
         return
 
-      self.__source_death(sv, dst)
-
-      if self.snum<1:
-        return
+      # self.__source_death(sv, dst)
+      # if self.snum<1:
+        # return
 

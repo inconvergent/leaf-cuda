@@ -34,7 +34,7 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
       snum = l.snum
       vnum = l.vnum
 
-      sxy = l.sxy[:snum,:]
+      # sxy = l.sxy[:snum,:]
       vxy = l.vxy[:vnum,:]
 
       print(strftime("%Y-%m-%d %H:%M:%S"), 'itt', l.itt, 'snum', snum, 'vnum', vnum, 'time', time()-t0)
@@ -52,11 +52,12 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
         # render.circle(x, y, l.one, fill=True)
 
       # # nearby
-      render.set_front(colors['front'])
-      show_open(render, snum, sxy, vxy, sv)
+      # render.set_front(colors['front'])
+      # show_open(render, snum, sxy, vxy, sv)
 
     if l.itt % export_steps == 0:
       name = fn.name()
+      render.transparent_pix()
       render.write_to_png(name+'.png')
 
     return True
@@ -70,10 +71,15 @@ def main():
   from modules.leaf_open import LeafOpen as Leaf
   from render.render import Animate
   from numpy.random import random
+  from numpy import array
+  from numpy import pi
+  from numpy import column_stack
+  from numpy import sin
+  from numpy import cos
 
   colors = {
     'back': [1,1,1,1],
-    'front': [0,0,0,0.7],
+    'front': [0,0,0,0.5],
     'cyan': [0,0.6,0.6,0.3],
     'red': [0.7,0.0,0.0,0.3],
     'light': [0,0,0,0.2],
@@ -81,20 +87,24 @@ def main():
 
   threads = 512
 
-  render_steps = 1
-  export_steps = 1
+  render_steps = 10
+  export_steps = 10
 
-  size = 512
+  size = 512*2
   one = 1.0/size
 
-  node_rad = 7*one
+  node_rad = 2*one
 
   area_rad = 5*node_rad
   sources_rad = 1*node_rad
   stp = node_rad*0.5
   kill_rad = node_rad
 
-  init_veins = 0.2+0.6*random((10,2))
+  # init_veins = 0.2+0.6*random((10,2))
+  # init_veins = array([[0.5]*2])
+  phi = random(3)*2*pi
+  init_veins = 0.5+column_stack([cos(phi), sin(phi)])*0.45
+
 
   from dddUtils.random import darts
   init_num_sources = 100000

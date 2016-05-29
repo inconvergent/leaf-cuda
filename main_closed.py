@@ -10,7 +10,7 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
 
   from time import time
   from time import strftime
-  from modules.helpers import show_open
+  # from modules.helpers import show_closed
   from numpy.random import random
 
   t0 = time()
@@ -37,7 +37,8 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
       sxy = l.sxy[:snum,:]
       vxy = l.vxy[:vnum,:]
 
-      print(strftime("%Y-%m-%d %H:%M:%S"), 'itt', l.itt, 'snum', snum, 'vnum', vnum, 'time', time()-t0)
+      print(strftime("%Y-%m-%d %H:%M:%S"), 'itt', l.itt,
+          'snum', snum, 'vnum', vnum, 'time', time()-t0)
 
       render.clear_canvas()
 
@@ -52,8 +53,8 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
         # render.circle(x, y, l.one, fill=True)
 
       # # nearby
-      render.set_front(colors['front'])
-      show_open(render, snum, sxy, vxy, sv)
+      # render.set_front(colors['front'])
+      # show_closed(render, snum, sxy, vxy, sv)
 
     if l.itt % export_steps == 0:
       name = fn.name()
@@ -67,9 +68,10 @@ def get_wrap(l, colors, render_steps=10, export_steps=10):
 
 def main():
 
-  from modules.leaf_open import LeafOpen as Leaf
+  from modules.leaf_closed import LeafClosed as Leaf
   from render.render import Animate
   from numpy.random import random
+  from numpy import array
 
   colors = {
     'back': [1,1,1,1],
@@ -94,11 +96,15 @@ def main():
   stp = node_rad*0.5
   kill_rad = node_rad
 
-  init_veins = 0.2+0.6*random((10,2))
+  # init_veins = 0.2+0.6*random((10,2))
+  init_veins = array([[0.5]*2])
 
-  from dddUtils.random import darts
-  init_num_sources = 100000
-  init_sources = darts(init_num_sources, 0.5, 0.5, 0.45, sources_rad)
+  init_num_sources = 10000
+
+  # from dddUtils.random import darts
+  # init_sources = darts(init_num_sources, 0.5, 0.5, 0.45, sources_rad)
+  from dddUtils.random import darts_rect
+  init_sources = darts_rect(init_num_sources, 0.5, 0.5, 0.95, 0.95, sources_rad)
 
   L = Leaf(
     size,
