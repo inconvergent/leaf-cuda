@@ -1,5 +1,7 @@
 # Leaf CUDA
 
+![ani](/img/ani.gif?raw=true "ani")
+
 ![img](/img/img.png?raw=true "img")
 
 Cuda implementation of the leaf venation algorithm:
