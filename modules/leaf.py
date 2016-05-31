@@ -54,6 +54,7 @@ class LeafClosed(object):
 
     self.vnum = 0
     self.snum = 0
+    self.enum = 0
 
     nz = int(1.0/(2*self.area_rad))
     self.nz = nz
@@ -62,8 +63,10 @@ class LeafClosed(object):
     nmax = self.nmax
 
     self.sxy = zeros((nmax,2), npfloat)
+
     self.vxy = zeros((nmax,2), npfloat)
     self.vec = zeros((nmax,2), npfloat)
+    self.edges = zeros((nmax,2), npint)
 
     self.sv = zeros(nmax, npint)
     self.sv_num = zeros(nmax, npint)
@@ -242,25 +245,76 @@ class LeafClosed(object):
 
     return vs_dict, vs_map, vs_ind, vs_num
 
-  def __growth(self, zone_leap, zone_num, zone_node, vs_map, vs_ind, vs_counts):
+  def __get_vs_xy(self, vs_dict):
+
+    vxy = self.vxy
+    sxy = self.sxy
+
+    res = []
+
+    for v,ss in vs_dict.iteritems():
+      for s in ss:
+        res.append((list(vxy[v,:]), list(sxy[s,:])))
+
+    return res
+
+  def __get_obsolete_source_map(self, sv_num, sv, dst):
+
+    from collections import defaultdict
+
+    sv_leap = self.sv_leap
+    kill_rad = self.kill_rad
+
+    obsolete_sources = defaultdict(list)
+
+    for s in xrange(self.snum):
+
+      near = 0
+      vv = []
+      for k in xrange(sv_num[s]):
+        v = sv[s*sv_leap+k]
+        if v<0:
+          continue
+        vv.append(v)
+
+        dd = dst[s*sv_leap+k]
+        if dd<kill_rad:
+          near += 1
+
+      if (sv_num[s]>0) and (near >= sv_num[s]):
+        obsolete_sources[s] = set(vv)
+
+    return obsolete_sources
+
+  def __growth(
+    self,
+    zone_leap,
+    zone_num,
+    zone_node,
+    vs_map,
+    vs_ind,
+    vs_counts,
+    obsolete_soures
+  ):
 
     from pycuda.driver import In
     from pycuda.driver import InOut
+    from numpy import ones
 
     vnum = self.vnum
     snum = self.snum
+    enum = self.enum
+
     vec = self.vec[:vnum,:]
 
     stp = self.stp
     kill_rad = self.kill_rad
 
+    edges = self.edges
     sxy = self.sxy[:snum, :]
     vxy = self.vxy[:vnum, :]
 
     vec[:,:] = -99.0
-
-    parents = set()
-    children = set()
 
     self.cuda_growth(
       npint(self.nz),
@@ -281,62 +335,42 @@ class LeafClosed(object):
     )
 
     count = 0
-    warnings = 0
     abort = True
     for i in xrange(vnum):
-
       gv = vec[i,:]
       if gv[0]<-3.0:
-        warnings += 1
         continue
 
-      parents.add(i)
-      children.add(vnum+count)
-
-      self.vxy[vnum+count,:] = gv
+      newv = vnum+count
       count += 1
+      edges[enum, :] = [i,newv]
+      enum += 1
+
+      self.vxy[newv,:] = gv
       abort = False
 
-    self.parents = parents
-    self.children = children
+    ## merged
+    for s,vv in obsolete_soures.iteritems():
 
+      newv = vnum+count
+      count += 1
+      self.vxy[newv,:] = sxy[s,:]
+      for v in vv:
+        edges[enum,:] = [v,newv]
+        enum += 1
+
+    self.enum = enum
     self.vnum += count
 
-    return not abort
+    ## remove sources
+    alive_sources = ones(snum, npint)
+    alive_sources[list(obsolete_soures.keys())] = 0
+    alive_inds = alive_sources[:snum].nonzero()[0]
+    na = len(alive_inds)
+    self.sxy[:na,:] = sxy[alive_inds,:]
+    self.snum = na
 
-  def __alive_sources(self, sv_num, sv, dst):
-
-    from numpy import ones
-
-    sv_leap = self.sv_leap
-    kill_rad = self.kill_rad
-
-    mask = ones(self.snum)
-
-    for s in xrange(self.snum):
-
-      ## TODO: this can be vectorized
-
-      near = 0
-      for k in xrange(sv_num[s]):
-        v = sv[s*sv_leap+k]
-        if v<0:
-          continue
-
-        dd = dst[s*sv_leap+k]
-        if dd<kill_rad:
-          near += 1
-          # mask[s] = 0
-          # break
-
-      if (sv_num[s]>0) and (near >= sv_num[s]):
-        mask[s] = 0
-
-    inds = mask.nonzero()[0]
-    alive = len(inds)
-    self.sxy[:alive,:] = self.sxy[inds,:]
-    self.snum = alive
-    return self.snum>0
+    return abort
 
   def step(self, show=None):
 
@@ -347,20 +381,24 @@ class LeafClosed(object):
       zone_leap, zone_node, zone_num = self.__make_zonemap()
       sv_num, sv, dst = self.__rnn_query(zone_leap, zone_node, zone_num)
 
-      # sv, sv_num is out of sync after __source_death is called
-
+      # sv, sv_num is out of sync after __alive_sources is called
       vs_dict, vs_map, vs_ind, vs_num = self.__get_vs(sv_num, sv)
-      if not self.__growth(zone_leap, zone_num, zone_node, vs_map, vs_ind, vs_num):
+      vs_xy = self.__get_vs_xy(vs_dict)
+
+      obsolete_soures = self.__get_obsolete_source_map(sv_num, sv, dst)
+
+      abort = self.__growth(
+        zone_leap,
+        zone_num,
+        zone_node,
+        vs_map,
+        vs_ind,
+        vs_num,
+        obsolete_soures
+      )
+
+      yield vs_xy
+
+      if abort:
         return
-
-      yield vs_dict
-
-      if not self.__alive_sources(sv_num, sv, dst):
-        return
-
-      # ma = self.sv_num[:self.snum*self.sv_leap].max()
-      # if ma>self.sv_leap*0.5:
-        # self.sv_leap *= 2
-        # print('resize, new sv_leap: ', self.sv_leap)
-        # # assert  ma<sv_leap, 'sv_num exceeds sv_leap: {:d} {:d}'.format(ma, sv_leap)
 
