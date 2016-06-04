@@ -49,7 +49,7 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       r = node_rad*0.5
 
       # # nearby
-      # render.set_front(colors['front'])
+      # render.set_front(colors['cyan'])
       # for v,s in vs_xy:
         # render.line(v[0], v[1], s[0], s[1])
 
@@ -64,9 +64,9 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
         render.line(*xx.flatten())
 
       # # sources
-      # render.set_front(colors['light'])
-      # for x,y in sxy:
-        # render.circle(x, y, 0.5*r, fill=True)
+      render.set_front(colors['light'])
+      for x,y in sxy:
+        render.circle(x, y, 0.5*r, fill=True)
 
 
     if (l.itt % export_steps == 0) or final:
@@ -101,16 +101,16 @@ def main():
 
   threads = 256
 
-  render_steps = 20
-  export_steps = 20
+  render_steps = 1
+  export_steps = 2000
 
   size = 1024
   one = 1.0/size
 
-  node_rad = 9*one
+  node_rad = 10*one
 
-  area_rad = 5*node_rad
-  sources_rad = 2*node_rad
+  area_rad = 4*node_rad
+  sources_rad = 1.5*node_rad
   stp = node_rad
   kill_rad = node_rad
 

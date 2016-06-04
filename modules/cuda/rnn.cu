@@ -21,7 +21,8 @@ __device__ bool is_relative(
   const int zone_leap,
   const int *zone_num,
   const int *zone_node,
-  const float rad,
+  const float area_rad,
+  const float kill_rad,
   const float *sxy,
   const float *vxy,
   const int ss,
@@ -32,14 +33,22 @@ __device__ bool is_relative(
   int z;
 
   float dd = dist(sxy, vxy, ss, vv);
-  if (dd>rad){
+  if (dd>area_rad){
     return false;
+  }
+
+  if (dist(sxy, vxy, ss, vv)<kill_rad){
+    return true;
   }
 
   for (int zk=0;zk<ZN;zk++){
     z = Z[zk];
     for (int k=0;k<zone_num[z];k++){
       uu = 2*zone_node[z*zone_leap+k];
+      if (vv == uu){
+        continue;
+      }
+
       if (dd>max(dist(sxy, vxy, ss, uu), dist(vxy, vxy, vv, uu))){
         return false;
       }
@@ -51,7 +60,8 @@ __device__ bool is_relative(
 
 __global__ void RNN(
   const int nz,
-  const float rad,
+  const float area_rad,
+  const float kill_rad,
   const int zone_leap,
   const int sv_leap,
   const int *zone_num,
@@ -97,7 +107,8 @@ __global__ void RNN(
         zone_leap,
         zone_num,
         zone_node,
-        rad,
+        area_rad,
+        kill_rad,
         sxy,
         vxy,
         ss,

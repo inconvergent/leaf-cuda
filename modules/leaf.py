@@ -28,7 +28,7 @@ class LeafClosed(object):
       kill_rad,
       sources_rad,
       threads = 256,
-      nmax = 100000000
+      nmax = 1000000
     ):
 
     self.itt = 0
@@ -44,14 +44,6 @@ class LeafClosed(object):
 
     self.sources_rad = sources_rad
 
-    self.__init()
-    self.__init_sources(init_sources)
-    self.__init_veins(init_veins)
-    self.__cuda_init()
-    self.sv_leap = 50*int(self.snum/self.nz2)
-
-  def __init(self):
-
     self.vnum = 0
     self.snum = 0
     self.enum = 0
@@ -62,16 +54,9 @@ class LeafClosed(object):
     self.nz2 = self.nz**2
     nmax = self.nmax
 
-    self.sxy = zeros((nmax,2), npfloat)
-
-    self.vxy = zeros((nmax,2), npfloat)
     self.vec = zeros((nmax,2), npfloat)
     self.edges = zeros((nmax,2), npint)
 
-    self.sv = zeros(nmax, npint)
-    self.sv_num = zeros(nmax, npint)
-
-    self.dst = zeros(nmax, npfloat)
 
     self.zone = zeros(nmax, npint)
     zone_map_size = self.nz2*64
@@ -79,6 +64,15 @@ class LeafClosed(object):
 
     self.zone_num = zeros(self.nz2, npint)
 
+    self.__init_sources(init_sources)
+    self.__init_veins(init_veins)
+    self.__cuda_init()
+
+    sv_leap = 30*int(self.snum/self.nz2)
+    self.sv_leap = sv_leap
+    self.sv = zeros(sv_leap*nmax, npint)
+    self.sv_num = zeros(sv_leap*nmax, npint)
+    self.dst = zeros(sv_leap*nmax, npfloat)
 
   def __cuda_init(self):
 
@@ -111,12 +105,14 @@ class LeafClosed(object):
 
   def __init_sources(self, init_sources):
 
+    self.sxy = zeros((self.nmax,2), npfloat)
     snum = len(init_sources)
     self.sxy[:snum,:] = init_sources.astype(npfloat)
     self.snum = snum
 
   def __init_veins(self, init_veins):
 
+    self.vxy = zeros((self.nmax,2), npfloat)
     vnum = len(init_veins)
     self.vxy[:vnum,:] = init_veins.astype(npfloat)
     self.vnum = vnum
@@ -191,6 +187,7 @@ class LeafClosed(object):
     self.cuda_rnn(
       npint(self.nz),
       npfloat(self.area_rad),
+      npfloat(self.kill_rad),
       npint(zone_leap),
       npint(sv_leap),
       In(zone_num),
@@ -206,7 +203,7 @@ class LeafClosed(object):
       grid=(snum//self.threads + 1,1)
     )
 
-    # print('sv', sv[:snum], (sv[:snum]>-1).sum())
+    print('sv', sv[:snum], (sv[:snum]>-1).sum())
     # print('sv_num',sv_num[:snum])
     # print('dst',dst[:snum])
 
@@ -350,14 +347,9 @@ class LeafClosed(object):
       abort = False
 
     ## merged
-    for s,vv in obsolete_soures.iteritems():
-
-      newv = vnum+count
-      count += 1
-      self.vxy[newv,:] = sxy[s,:]
-      for v in vv:
-        edges[enum,:] = [v,newv]
-        enum += 1
+    # for s,vv in obsolete_soures.iteritems():
+      # for v in vv:
+        # vxy[v,:] = sxy[s,:]
 
     self.enum = enum
     self.vnum += count
@@ -399,6 +391,6 @@ class LeafClosed(object):
 
       yield vs_xy
 
-      if abort:
-        return
+      # if abort:
+        # return
 

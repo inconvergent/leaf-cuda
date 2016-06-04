@@ -82,6 +82,7 @@ __global__ void Growth(
     }
   }
 
+
   if (mi>rad){
     vec[vv] = tx;
     vec[vv+1] = ty;
