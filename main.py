@@ -34,29 +34,27 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
 
     if (l.itt % render_steps == 0) or final:
 
-      snum = l.snum
       vnum = l.vnum
       edges = l.edges[:l.enum,:]
 
-      sxy = l.sxy[:snum,:]
       vxy = l.vxy[:vnum,:]
 
       zsize = len(l.zone_node)
       print(strftime("%Y-%m-%d %H:%M:%S"), 'itt', l.itt,
-          'snum', snum, 'vnum', vnum, 'zone', zsize, 'time', time()-t0)
+          'snum', l.snum, 'vnum', vnum, 'zone', zsize, 'time', time()-t0)
 
       render.clear_canvas()
       r = node_rad*0.5
 
       # # nearby
-      # render.set_front(colors['cyan'])
-      # for v,s in vs_xy:
-        # render.line(v[0], v[1], s[0], s[1])
+      render.set_front(colors['cyan'])
+      for v,s in vs_xy:
+        render.line(v[0], v[1], s[0], s[1])
 
       # veins
-      # render.set_front(colors['front'])
-      # for i,(x,y) in enumerate(vxy):
-        # render.circle(x, y, r, fill=True)
+      render.set_front(colors['front'])
+      for i,(x,y) in enumerate(vxy):
+        render.circle(x, y, r, fill=True)
 
       # edges
       render.set_front(colors['front'])
@@ -64,8 +62,8 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
         render.line(*xx.flatten())
 
       # # sources
-      render.set_front(colors['light'])
-      for x,y in sxy:
+      render.set_front(colors['red'])
+      for x,y in l.sxy[l.smask,:]:
         render.circle(x, y, 0.5*r, fill=True)
 
 
@@ -92,7 +90,7 @@ def main():
 
   colors = {
     'back': [1,1,1,1],
-    'front': [0,0,0,1.0],
+    'front': [0,0,0,0.3],
     'cyan': [0,0.6,0.6,0.3],
     'red': [0.7,0.0,0.0,0.8],
     'blue': [0.0,0.0,0.7,0.8],

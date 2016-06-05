@@ -9,6 +9,7 @@ from numpy import zeros
 
 from numpy import float32 as npfloat
 from numpy import int32 as npint
+from numpy import bool as npbool
 
 
 TWOPI = pi*2
@@ -45,7 +46,6 @@ class LeafClosed(object):
     self.sources_rad = sources_rad
 
     self.vnum = 0
-    self.snum = 0
     self.enum = 0
 
     nz = int(1.0/(2*self.area_rad))
@@ -56,7 +56,6 @@ class LeafClosed(object):
 
     self.vec = zeros((nmax,2), npfloat)
     self.edges = zeros((nmax,2), npint)
-
 
     self.zone = zeros(nmax, npint)
     zone_map_size = self.nz2*64
@@ -70,9 +69,13 @@ class LeafClosed(object):
 
     sv_leap = 30*int(self.snum/self.nz2)
     self.sv_leap = sv_leap
-    self.sv = zeros(sv_leap*nmax, npint)
-    self.sv_num = zeros(sv_leap*nmax, npint)
-    self.dst = zeros(sv_leap*nmax, npfloat)
+
+    sv_size = sv_leap*self.snum
+    self.sv_size = sv_size
+
+    self.sv = zeros(sv_size, npint)
+    self.sv_num = zeros(sv_size, npint)
+    self.dst = zeros(sv_size, npfloat)
 
   def __cuda_init(self):
 
@@ -105,10 +108,12 @@ class LeafClosed(object):
 
   def __init_sources(self, init_sources):
 
-    self.sxy = zeros((self.nmax,2), npfloat)
+    from numpy import ones
+
     snum = len(init_sources)
-    self.sxy[:snum,:] = init_sources.astype(npfloat)
     self.snum = snum
+    self.sxy = init_sources.astype(npfloat)
+    self.smask = ones(snum, npbool)
 
   def __init_veins(self, init_veins):
 
@@ -168,17 +173,16 @@ class LeafClosed(object):
 
     from pycuda.driver import In
     from pycuda.driver import InOut
-    from pycuda.driver import Out
+    # from pycuda.driver import Out
 
     snum = self.snum
     vnum = self.vnum
 
+    sv_size = self.sv_size
 
-    sv_leap = self.sv_leap
-    sv = self.sv[:snum*sv_leap]
-    sv_num = self.sv_num[:snum*sv_leap]
-    dst = self.dst[:snum*sv_leap]
-
+    sv = self.sv[:sv_size]
+    sv_num = self.sv_num[:sv_size]
+    dst = self.dst[:sv_size]
 
     sv_num[:] = 0
     sv[:] = -5
@@ -189,12 +193,13 @@ class LeafClosed(object):
       npfloat(self.area_rad),
       npfloat(self.kill_rad),
       npint(zone_leap),
-      npint(sv_leap),
+      npint(self.sv_leap),
       In(zone_num),
       In(zone_node),
       npint(snum),
       npint(vnum),
-      In(self.sxy[:snum,:]),
+      In(self.smask),
+      In(self.sxy),
       In(self.vxy[:vnum,:]),
       InOut(sv_num),
       InOut(sv),
@@ -202,10 +207,6 @@ class LeafClosed(object):
       block=(self.threads,1,1),
       grid=(snum//self.threads + 1,1)
     )
-
-    print('sv', sv[:snum], (sv[:snum]>-1).sum())
-    # print('sv_num',sv_num[:snum])
-    # print('dst',dst[:snum])
 
     return sv_num, sv, dst
 
@@ -296,10 +297,8 @@ class LeafClosed(object):
 
     from pycuda.driver import In
     from pycuda.driver import InOut
-    from numpy import ones
 
     vnum = self.vnum
-    snum = self.snum
     enum = self.enum
 
     vec = self.vec[:vnum,:]
@@ -308,7 +307,7 @@ class LeafClosed(object):
     kill_rad = self.kill_rad
 
     edges = self.edges
-    sxy = self.sxy[:snum, :]
+    sxy = self.sxy
     vxy = self.vxy[:vnum, :]
 
     vec[:,:] = -99.0
@@ -348,19 +347,16 @@ class LeafClosed(object):
 
     ## merged
     # for s,vv in obsolete_soures.iteritems():
-      # for v in vv:
-        # vxy[v,:] = sxy[s,:]
+      # if len(vv)>1:
+        # for v in vv:
+          # vxy[v,:] = sxy[s,:]
 
     self.enum = enum
     self.vnum += count
 
     ## remove sources
-    alive_sources = ones(snum, npint)
-    alive_sources[list(obsolete_soures.keys())] = 0
-    alive_inds = alive_sources[:snum].nonzero()[0]
-    na = len(alive_inds)
-    self.sxy[:na,:] = sxy[alive_inds,:]
-    self.snum = na
+    die = list(obsolete_soures.keys())
+    self.smask[die] = False
 
     return abort
 
@@ -391,6 +387,6 @@ class LeafClosed(object):
 
       yield vs_xy
 
-      # if abort:
-        # return
+      if abort:
+        return
 

@@ -37,9 +37,9 @@ __device__ bool is_relative(
     return false;
   }
 
-  if (dist(sxy, vxy, ss, vv)<kill_rad){
-    return true;
-  }
+  /*if (dist(sxy, vxy, ss, vv)<kill_rad){*/
+    /*return true;*/
+  /*}*/
 
   for (int zk=0;zk<ZN;zk++){
     z = Z[zk];
@@ -68,6 +68,7 @@ __global__ void RNN(
   const int *zone_node,
   const int snum,
   const int vnum,
+  const bool *smask,
   const float *sxy,
   const float *vxy,
   int *sv_num,
@@ -77,6 +78,10 @@ __global__ void RNN(
   const int s = blockIdx.x*THREADS + threadIdx.x;
 
   if (s>=snum){
+    return;
+  }
+
+  if (!smask[s]){
     return;
   }
 

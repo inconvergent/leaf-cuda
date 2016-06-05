@@ -2,7 +2,7 @@
 
 __global__ void Growth(
   const int nz,
-  const float rad,
+  const float kill_rad,
   const float stp,
   const int zone_leap,
   const int *zone_num,
@@ -83,7 +83,7 @@ __global__ void Growth(
   }
 
 
-  if (mi>rad){
+  if (mi>kill_rad){
     vec[vv] = tx;
     vec[vv+1] = ty;
   }
