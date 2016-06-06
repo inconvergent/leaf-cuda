@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
+# 30- coding: utf-8 -*-
 
 
 from __future__ import print_function
@@ -21,6 +21,8 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
   rndcolors = random((l.nz2,3))
   rndcolors[:,0] *= 0.1
   step = l.step()
+  kill_rad = l.kill_rad
+  one = l.one
 
   def wrap(render):
 
@@ -44,7 +46,6 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
           'snum', l.snum, 'vnum', vnum, 'zone', zsize, 'time', time()-t0)
 
       render.clear_canvas()
-      r = node_rad*0.5
 
       # # nearby
       render.set_front(colors['cyan'])
@@ -52,19 +53,22 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
         render.line(v[0], v[1], s[0], s[1])
 
       # veins
-      render.set_front(colors['front'])
-      for i,(x,y) in enumerate(vxy):
-        render.circle(x, y, r, fill=True)
+      # render.set_front(colors['front'])
+      # for i,(x,y) in enumerate(vxy):
+        # render.circle(x, y, node_rad, fill=True)
 
       # edges
-      render.set_front(colors['front'])
+      render.set_front(colors['edge'])
       for xx in vxy[edges,:]:
         render.line(*xx.flatten())
 
-      # # sources
+      ## sources
       render.set_front(colors['red'])
-      for x,y in l.sxy[l.smask,:]:
-        render.circle(x, y, 0.5*r, fill=True)
+      for x,y in l.sxy:
+        render.circle(x, y, one, fill=True)
+
+      for x,y in l.sxy[l.smask]:
+        render.circle(x, y, kill_rad, fill=False)
 
 
     if (l.itt % export_steps == 0) or final:
@@ -72,8 +76,8 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       render.write_to_png(name+'.png')
       # export('leaf', name+'.2obj', vxy)
 
-    if final:
-      return False
+    # if final:
+      # return False
 
     return True
 
@@ -91,6 +95,7 @@ def main():
   colors = {
     'back': [1,1,1,1],
     'front': [0,0,0,0.3],
+    'edge': [0,0,0,0.6],
     'cyan': [0,0.6,0.6,0.3],
     'red': [0.7,0.0,0.0,0.8],
     'blue': [0.0,0.0,0.7,0.8],
@@ -99,24 +104,24 @@ def main():
 
   threads = 256
 
-  render_steps = 1
-  export_steps = 2000
+  render_steps = 100
+  export_steps = 100
 
   size = 1024
   one = 1.0/size
 
-  node_rad = 10*one
+  node_rad = 1*one
 
-  area_rad = 4*node_rad
-  sources_rad = 1.5*node_rad
-  stp = node_rad
-  kill_rad = node_rad
+  area_rad = 20*node_rad
+  stp = node_rad*2
+  kill_rad = 2*stp
+  sources_rad = 2.*kill_rad
 
   # init_num_sources = 4
   # init_veins = 0.2+0.6*random((init_num_sources,2))
   init_veins = array([[0.5, 0.5]])
 
-  init_num_sources = 100000
+  init_num_sources = 300000
 
   # from dddUtils.random import darts
   # init_sources = darts(init_num_sources, 0.5, 0.5, 0.45, sources_rad)
@@ -130,7 +135,6 @@ def main():
     init_veins,
     area_rad,
     kill_rad,
-    sources_rad,
     threads = threads
   )
   print('nz', L.nz)

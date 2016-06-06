@@ -31,25 +31,30 @@ __device__ bool is_relative(
 
   int uu;
   int z;
+  float su;
+  float vu;
 
   float dd = dist(sxy, vxy, ss, vv);
+
+
   if (dd>area_rad){
     return false;
   }
 
-  /*if (dist(sxy, vxy, ss, vv)<kill_rad){*/
-    /*return true;*/
-  /*}*/
-
   for (int zk=0;zk<ZN;zk++){
     z = Z[zk];
     for (int k=0;k<zone_num[z];k++){
+
       uu = 2*zone_node[z*zone_leap+k];
+
       if (vv == uu){
         continue;
       }
 
-      if (dd>max(dist(sxy, vxy, ss, uu), dist(vxy, vxy, vv, uu))){
+      su = dist(sxy, vxy, ss, uu);
+      vu = dist(vxy, vxy, vv, uu);
+
+      if (dd>max(su, vu)){
         return false;
       }
 

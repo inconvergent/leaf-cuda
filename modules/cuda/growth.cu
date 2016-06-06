@@ -72,7 +72,7 @@ __global__ void Growth(
           continue;
         }
 
-        dd = sqrt(powf(vxy[cand]-tx, 2.0f)+
+        dd = sqrt(powf(vxy[cand]-tx,2.0f)+
                   powf(vxy[cand+1]-ty,2.0f));
 
         if (dd<mi){
@@ -82,8 +82,7 @@ __global__ void Growth(
     }
   }
 
-
-  if (mi>kill_rad){
+  if (mi>stp){
     vec[vv] = tx;
     vec[vv+1] = ty;
   }

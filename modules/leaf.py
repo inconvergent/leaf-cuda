@@ -27,7 +27,6 @@ class LeafClosed(object):
       init_veins,
       area_rad,
       kill_rad,
-      sources_rad,
       threads = 256,
       nmax = 1000000
     ):
@@ -43,8 +42,6 @@ class LeafClosed(object):
     self.one = 1.0/size
     self.stp = stp
 
-    self.sources_rad = sources_rad
-
     self.vnum = 0
     self.enum = 0
 
@@ -58,6 +55,7 @@ class LeafClosed(object):
     self.edges = zeros((nmax,2), npint)
 
     self.zone = zeros(nmax, npint)
+
     zone_map_size = self.nz2*64
     self.zone_node = zeros(zone_map_size, npint)
 
@@ -213,7 +211,6 @@ class LeafClosed(object):
   def __get_vs(self, sv_num, sv):
 
     ## TODO: write as kernel?
-
     from collections import defaultdict
     from numpy import concatenate
     from numpy import cumsum
@@ -264,7 +261,6 @@ class LeafClosed(object):
     kill_rad = self.kill_rad
 
     obsolete_sources = defaultdict(list)
-
     for s in xrange(self.snum):
 
       near = 0
@@ -345,12 +341,6 @@ class LeafClosed(object):
       self.vxy[newv,:] = gv
       abort = False
 
-    ## merged
-    # for s,vv in obsolete_soures.iteritems():
-      # if len(vv)>1:
-        # for v in vv:
-          # vxy[v,:] = sxy[s,:]
-
     self.enum = enum
     self.vnum += count
 
@@ -387,6 +377,6 @@ class LeafClosed(object):
 
       yield vs_xy
 
-      if abort:
-        return
+      # if abort:
+        # return
 
