@@ -1,5 +1,9 @@
 #define THREADS _THREADS_
 
+__device__ float dist(const float *a, const float *b, const int ii, const int jj){
+    return sqrt(powf(a[ii]-b[jj], 2.0f)+powf(a[ii+1]-b[jj+1], 2.0f));
+}
+
 __global__ void Growth(
   const int nz,
   const float kill_rad,
@@ -44,6 +48,12 @@ __global__ void Growth(
     dx = sxy[ss]-vxy[vv];
     dy = sxy[ss+1]-vxy[vv+1];
     dd = sqrt(dx*dx+dy*dy);
+
+    /*if (dd<kill_rad){*/
+      /*vec[vv] = -100.0f;*/
+      /*vec[vv+1] = -100.0f;*/
+      /*return;*/
+    /*}*/
     gx += dx/dd;
     gy += dy/dd;
   }

@@ -10,19 +10,20 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
 
   from time import time
   from time import strftime
+  from numpy.linalg import norm
+  from numpy import linspace
   from dddUtils.ioOBJ import export_2d as export
-  from numpy.random import random
+
 
   t0 = time()
 
   from fn import Fn
   fn = Fn(prefix='./res/')
 
-  rndcolors = random((l.nz2,3))
-  rndcolors[:,0] *= 0.1
   step = l.step()
   kill_rad = l.kill_rad
   one = l.one
+  max_gen = 8
 
   def wrap(render):
 
@@ -39,6 +40,9 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       vnum = l.vnum
       edges = l.edges[:l.enum,:]
 
+      gen = l.gen[:vnum]
+      # max_gen = gen.max()
+
       vxy = l.vxy[:vnum,:]
 
       zsize = len(l.zone_node)
@@ -48,19 +52,23 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       render.clear_canvas()
 
       # # nearby
-      render.set_front(colors['cyan'])
-      for v,s in vs_xy:
-        render.line(v[0], v[1], s[0], s[1])
+      # render.set_front(colors['cyan'])
+      # for v,s in vs_xy:
+        # render.line(v[0], v[1], s[0], s[1])
 
       # veins
-      # render.set_front(colors['front'])
+      # render.set_front(colors['vein'])
       # for i,(x,y) in enumerate(vxy):
-        # render.circle(x, y, node_rad, fill=True)
+        # # r = node_rad
+        # r = (((max_gen-gen[i])/max_gen)**1.1)*node_rad
+        # render.circle(x, y, r, fill=True)
 
       # edges
-      render.set_front(colors['edge'])
-      for xx in vxy[edges,:]:
-        render.line(*xx.flatten())
+      render.set_front(colors['vein'])
+      for ee in edges:
+        xy = vxy[ee, :]
+        r = (((max_gen-gen[ee[1]]+1)/max_gen)**1.1)*node_rad
+        render.circles(xy[0,0], xy[0,1], xy[1,0], xy[1,1], r, nmin=3)
 
       ## sources
       render.set_front(colors['red'])
@@ -70,15 +78,15 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       for x,y in l.sxy[l.smask]:
         render.circle(x, y, kill_rad, fill=False)
 
-
     if (l.itt % export_steps == 0) or final:
       name = fn.name()
       render.write_to_png(name+'.png')
       # export('leaf', name+'.2obj', vxy)
 
-    # if final:
-      # return False
+    if final:
+      return False
 
+    # raw_input('')
     return True
 
   return wrap
@@ -95,6 +103,7 @@ def main():
   colors = {
     'back': [1,1,1,1],
     'front': [0,0,0,0.3],
+    'vein': [0,0,0,0.9],
     'edge': [0,0,0,0.6],
     'cyan': [0,0.6,0.6,0.3],
     'red': [0.7,0.0,0.0,0.8],
@@ -104,24 +113,26 @@ def main():
 
   threads = 256
 
-  render_steps = 100
-  export_steps = 100
+  render_steps = 2
+  export_steps = 2
 
-  size = 1024
+  size = 512
   one = 1.0/size
 
-  node_rad = 1*one
+  node_rad = 2*one
 
-  area_rad = 20*node_rad
+  area_rad = 15*node_rad
   stp = node_rad*2
   kill_rad = 2*stp
-  sources_rad = 2.*kill_rad
+  sources_rad = 2*kill_rad
+
+  init_num_sources = 3
 
   # init_num_sources = 4
-  # init_veins = 0.2+0.6*random((init_num_sources,2))
-  init_veins = array([[0.5, 0.5]])
+  init_veins = 0.2+0.6*random((init_num_sources,2))
+  # init_veins = array([[0.5, 0.5]])
 
-  init_num_sources = 300000
+  init_num_sources = 100000
 
   # from dddUtils.random import darts
   # init_sources = darts(init_num_sources, 0.5, 0.5, 0.45, sources_rad)

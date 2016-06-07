@@ -11,6 +11,9 @@ from numpy import float32 as npfloat
 from numpy import int32 as npint
 from numpy import bool as npbool
 
+from operator import itemgetter
+first = itemgetter(0)
+
 
 TWOPI = pi*2
 PI = pi
@@ -58,6 +61,8 @@ class LeafClosed(object):
 
     zone_map_size = self.nz2*64
     self.zone_node = zeros(zone_map_size, npint)
+    self.has_descendants = zeros(nmax, npbool)
+    self.gen = zeros(nmax, npint)
 
     self.zone_num = zeros(self.nz2, npint)
 
@@ -171,7 +176,6 @@ class LeafClosed(object):
 
     from pycuda.driver import In
     from pycuda.driver import InOut
-    # from pycuda.driver import Out
 
     snum = self.snum
     vnum = self.vnum
@@ -214,9 +218,6 @@ class LeafClosed(object):
     from collections import defaultdict
     from numpy import concatenate
     from numpy import cumsum
-    from operator import itemgetter
-
-    first = itemgetter(0)
 
     sv_leap = self.sv_leap
     ma = sv_num[:self.snum*sv_leap].max()
@@ -253,7 +254,7 @@ class LeafClosed(object):
 
     return res
 
-  def __get_obsolete_source_map(self, sv_num, sv, dst):
+  def __obsolete_sources(self, sv_num, sv, dst):
 
     from collections import defaultdict
 
@@ -278,6 +279,10 @@ class LeafClosed(object):
       if (sv_num[s]>0) and (near >= sv_num[s]):
         obsolete_sources[s] = set(vv)
 
+    die = list(obsolete_sources.keys())
+    self.smask[die] = False
+    sv_num[die] = 0
+
     return obsolete_sources
 
   def __growth(
@@ -288,7 +293,7 @@ class LeafClosed(object):
     vs_map,
     vs_ind,
     vs_counts,
-    obsolete_soures
+    obsolete
   ):
 
     from pycuda.driver import In
@@ -296,6 +301,8 @@ class LeafClosed(object):
 
     vnum = self.vnum
     enum = self.enum
+    has_descendants = self.has_descendants
+    gen = self.gen
 
     vec = self.vec[:vnum,:]
 
@@ -304,7 +311,7 @@ class LeafClosed(object):
 
     edges = self.edges
     sxy = self.sxy
-    vxy = self.vxy[:vnum, :]
+    vxy = self.vxy
 
     vec[:,:] = -99.0
 
@@ -319,34 +326,48 @@ class LeafClosed(object):
       In(vs_ind),
       In(vs_counts),
       In(sxy),
-      In(vxy),
+      In(vxy[:vnum,:]),
       npint(vnum),
       InOut(vec),
       block=(self.threads,1,1),
       grid=(vnum//self.threads + 1,1)
     )
 
-    count = 0
     abort = True
     for i in xrange(vnum):
       gv = vec[i,:]
       if gv[0]<-3.0:
         continue
 
-      newv = vnum+count
-      count += 1
-      edges[enum, :] = [i,newv]
-      enum += 1
-
-      self.vxy[newv,:] = gv
+      if has_descendants[i]:
+        gen[vnum] = gen[i]+1
+      else:
+        gen[vnum] = gen[i]
+      has_descendants[i] = True
+      edges[enum, :] = [i,vnum]
+      vxy[vnum,:] = gv
       abort = False
+      enum += 1
+      vnum += 1
+
+    # for s,vv in obsolete.iteritems():
+      # if len(vv)>1:
+        # vxy[vnum,:] = sxy[s,:]
+        # vnum += 1
+
+    for s,vv in obsolete.iteritems():
+      vvv = list(vv)
+      if len(vvv)>1:
+        vxy[vnum,:] = sxy[s,:]
+        gen[vnum] = gen[vvv].max()
+        has_descendants[vvv] = True
+        for v in vvv:
+          edges[enum, :] = [v,vnum]
+          enum += 1
+        vnum += 1
 
     self.enum = enum
-    self.vnum += count
-
-    ## remove sources
-    die = list(obsolete_soures.keys())
-    self.smask[die] = False
+    self.vnum = vnum
 
     return abort
 
@@ -359,11 +380,10 @@ class LeafClosed(object):
       zone_leap, zone_node, zone_num = self.__make_zonemap()
       sv_num, sv, dst = self.__rnn_query(zone_leap, zone_node, zone_num)
 
-      # sv, sv_num is out of sync after __alive_sources is called
+      obsolete = self.__obsolete_sources(sv_num, sv, dst)
       vs_dict, vs_map, vs_ind, vs_num = self.__get_vs(sv_num, sv)
-      vs_xy = self.__get_vs_xy(vs_dict)
 
-      obsolete_soures = self.__get_obsolete_source_map(sv_num, sv, dst)
+      vs_xy = self.__get_vs_xy(vs_dict)
 
       abort = self.__growth(
         zone_leap,
@@ -372,11 +392,11 @@ class LeafClosed(object):
         vs_map,
         vs_ind,
         vs_num,
-        obsolete_soures
+        obsolete
       )
 
       yield vs_xy
 
-      # if abort:
-        # return
+      if abort:
+        return
 
