@@ -56,6 +56,8 @@ class LeafClosed(object):
 
     self.vec = zeros((nmax,2), npfloat)
     self.edges = zeros((nmax,2), npint)
+    self.parent = zeros(nmax, npint)
+    self.parent[:] = -1
 
     self.zone = zeros(nmax, npint)
 
@@ -79,6 +81,34 @@ class LeafClosed(object):
     self.sv = zeros(sv_size, npint)
     self.sv_num = zeros(sv_size, npint)
     self.dst = zeros(sv_size, npfloat)
+
+  def width_calc(self, scale, min_width, po=1.0):
+
+    from numpy import ones
+    from numpy import power
+
+    vnum = self.vnum
+    width = ones(vnum, 'float')
+    parent = self.parent
+
+    for v in xrange(vnum):
+
+      n = parent[v]
+      if n<0:
+        continue
+      while True:
+        if n<0:
+          break
+        width[n] += 1.0
+        n = parent[n]
+
+    width[:] = power(width, po)
+    ma = width.max()
+    width /= ma
+    width *= scale
+    width[width<min_width] = min_width
+
+    return width
 
   def __cuda_init(self):
 
@@ -265,6 +295,7 @@ class LeafClosed(object):
     has_descendants = self.has_descendants
     gen = self.gen
     edges = self.edges
+    parent = self.parent
     enum = self.enum
     sxy = self.sxy
     vnum = self.vnum
@@ -291,15 +322,11 @@ class LeafClosed(object):
     die = list(obsolete_sources.keys())
     self.smask[die] = False
 
-    # for s,vv in obsolete.iteritems():
-      # if len(vv)>1:
-        # vxy[vnum,:] = sxy[s,:]
-        # vnum += 1
-
     for s,vv in obsolete_sources.iteritems():
       vvv = list(vv)
       if len(vvv)>1:
         vxy[vnum,:] = sxy[s,:]
+        parent[vnum] = min(vvv)
         gen[vnum] = gen[vvv].max()
         has_descendants[vvv] = True
         for v in vvv:
@@ -334,6 +361,7 @@ class LeafClosed(object):
     kill_rad = self.kill_rad
 
     edges = self.edges
+    parent = self.parent
     sxy = self.sxy
     vxy = self.vxy
 
@@ -369,6 +397,7 @@ class LeafClosed(object):
         gen[vnum] = gen[i]
       has_descendants[i] = True
       edges[enum, :] = [i,vnum]
+      parent[vnum] = i
       vxy[vnum,:] = gv
       abort = False
       enum += 1

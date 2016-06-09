@@ -11,7 +11,7 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
   from time import time
   from time import strftime
   from numpy.linalg import norm
-  from numpy import linspace
+  from numpy import sqrt
   from dddUtils.ioOBJ import export_2d as export
 
 
@@ -23,7 +23,6 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
   step = l.step()
   kill_rad = l.kill_rad
   one = l.one
-  max_gen = 8
 
   def wrap(render):
 
@@ -40,8 +39,7 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       vnum = l.vnum
       edges = l.edges[:l.enum,:]
 
-      gen = l.gen[:vnum]
-      # max_gen = gen.max()
+      width = l.width_calc(scale=3*node_rad, min_width=node_rad*0.7, po=0.2)
 
       vxy = l.vxy[:vnum,:]
 
@@ -52,9 +50,9 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       render.clear_canvas()
 
       # # nearby
-      render.set_front(colors['cyan'])
-      for v,s in vs_xy:
-        render.line(v[0], v[1], s[0], s[1])
+      # render.set_front(colors['cyan'])
+      # for v,s in vs_xy:
+        # render.line(v[0], v[1], s[0], s[1])
 
       # veins
       # render.set_front(colors['vein'])
@@ -67,17 +65,17 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       render.set_front(colors['vein'])
       for ee in edges:
         xy = vxy[ee, :]
-        # r = (((max_gen-gen[ee[1]]+1)/max_gen)**1.1)*node_rad*2
-        r = node_rad
+        # r = node_rad
+        r = width[ee[1]]
         render.circles(xy[0,0], xy[0,1], xy[1,0], xy[1,1], r, nmin=3)
 
       ## sources
-      render.set_front(colors['red'])
-      for x,y in l.sxy:
-        render.circle(x, y, one, fill=True)
+      # render.set_front(colors['red'])
+      # for x,y in l.sxy:
+        # render.circle(x, y, one, fill=True)
 
-      for x,y in l.sxy[l.smask]:
-        render.circle(x, y, kill_rad, fill=False)
+      # for x,y in l.sxy[l.smask]:
+        # render.circle(x, y, kill_rad, fill=False)
 
     if (l.itt % export_steps == 0) or final:
       name = fn.name()
