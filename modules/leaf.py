@@ -254,16 +254,25 @@ class LeafClosed(object):
 
     return res
 
-  def __obsolete_sources(self, sv_num, sv, dst):
+  def __remove_obsolete_sources(self):
 
     from collections import defaultdict
 
+    obsolete_sources = defaultdict(list)
     sv_leap = self.sv_leap
     kill_rad = self.kill_rad
+    vxy = self.vxy
+    has_descendants = self.has_descendants
+    gen = self.gen
+    edges = self.edges
+    enum = self.enum
+    sxy = self.sxy
+    vnum = self.vnum
 
-    obsolete_sources = defaultdict(list)
+    zone_leap, zone_node, zone_num = self.__make_zonemap()
+    sv_num, sv, dst = self.__rnn_query(zone_leap, zone_node, zone_num)
+
     for s in xrange(self.snum):
-
       near = 0
       vv = []
       for k in xrange(sv_num[s]):
@@ -281,9 +290,25 @@ class LeafClosed(object):
 
     die = list(obsolete_sources.keys())
     self.smask[die] = False
-    sv_num[die] = 0
 
-    return obsolete_sources
+    # for s,vv in obsolete.iteritems():
+      # if len(vv)>1:
+        # vxy[vnum,:] = sxy[s,:]
+        # vnum += 1
+
+    for s,vv in obsolete_sources.iteritems():
+      vvv = list(vv)
+      if len(vvv)>1:
+        vxy[vnum,:] = sxy[s,:]
+        gen[vnum] = gen[vvv].max()
+        has_descendants[vvv] = True
+        for v in vvv:
+          edges[enum, :] = [v,vnum]
+          enum += 1
+        vnum += 1
+
+    self.enum = enum
+    self.vnum = vnum
 
   def __growth(
     self,
@@ -292,8 +317,7 @@ class LeafClosed(object):
     zone_node,
     vs_map,
     vs_ind,
-    vs_counts,
-    obsolete
+    vs_counts
   ):
 
     from pycuda.driver import In
@@ -350,22 +374,6 @@ class LeafClosed(object):
       enum += 1
       vnum += 1
 
-    # for s,vv in obsolete.iteritems():
-      # if len(vv)>1:
-        # vxy[vnum,:] = sxy[s,:]
-        # vnum += 1
-
-    for s,vv in obsolete.iteritems():
-      vvv = list(vv)
-      if len(vvv)>1:
-        vxy[vnum,:] = sxy[s,:]
-        gen[vnum] = gen[vvv].max()
-        has_descendants[vvv] = True
-        for v in vvv:
-          edges[enum, :] = [v,vnum]
-          enum += 1
-        vnum += 1
-
     self.enum = enum
     self.vnum = vnum
 
@@ -380,10 +388,9 @@ class LeafClosed(object):
       zone_leap, zone_node, zone_num = self.__make_zonemap()
       sv_num, sv, dst = self.__rnn_query(zone_leap, zone_node, zone_num)
 
-      obsolete = self.__obsolete_sources(sv_num, sv, dst)
       vs_dict, vs_map, vs_ind, vs_num = self.__get_vs(sv_num, sv)
 
-      vs_xy = self.__get_vs_xy(vs_dict)
+      yield self.__get_vs_xy(vs_dict)
 
       abort = self.__growth(
         zone_leap,
@@ -391,12 +398,11 @@ class LeafClosed(object):
         zone_node,
         vs_map,
         vs_ind,
-        vs_num,
-        obsolete
+        vs_num
       )
-
-      yield vs_xy
 
       if abort:
         return
+
+      self.__remove_obsolete_sources()
 

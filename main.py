@@ -52,22 +52,23 @@ def get_wrap(l, colors, node_rad, render_steps=10, export_steps=10):
       render.clear_canvas()
 
       # # nearby
-      # render.set_front(colors['cyan'])
-      # for v,s in vs_xy:
-        # render.line(v[0], v[1], s[0], s[1])
+      render.set_front(colors['cyan'])
+      for v,s in vs_xy:
+        render.line(v[0], v[1], s[0], s[1])
 
       # veins
       # render.set_front(colors['vein'])
       # for i,(x,y) in enumerate(vxy):
-        # # r = node_rad
-        # r = (((max_gen-gen[i])/max_gen)**1.1)*node_rad
+        # r = node_rad
+        # # r = (((max_gen-gen[i])/max_gen)**1.1)*node_rad
         # render.circle(x, y, r, fill=True)
 
       # edges
       render.set_front(colors['vein'])
       for ee in edges:
         xy = vxy[ee, :]
-        r = (((max_gen-gen[ee[1]]+1)/max_gen)**1.1)*node_rad
+        # r = (((max_gen-gen[ee[1]]+1)/max_gen)**1.1)*node_rad*2
+        r = node_rad
         render.circles(xy[0,0], xy[0,1], xy[1,0], xy[1,1], r, nmin=3)
 
       ## sources
@@ -113,31 +114,31 @@ def main():
 
   threads = 256
 
-  render_steps = 2
-  export_steps = 2
+  render_steps = 10
+  export_steps = 10
 
-  size = 512
+  size = 512*2
   one = 1.0/size
 
-  node_rad = 2*one
+  node_rad = 1*one
 
   area_rad = 15*node_rad
   stp = node_rad*2
   kill_rad = 2*stp
-  sources_rad = 2*kill_rad
+  sources_dst = 2*kill_rad
 
   init_num_sources = 3
 
   # init_num_sources = 4
-  init_veins = 0.2+0.6*random((init_num_sources,2))
-  # init_veins = array([[0.5, 0.5]])
+  # init_veins = 0.2+0.6*random((init_num_sources,2))
+  init_veins = array([[0.5, 0.5]])
 
   init_num_sources = 100000
 
   # from dddUtils.random import darts
   # init_sources = darts(init_num_sources, 0.5, 0.5, 0.45, sources_rad)
   from dddUtils.random import darts_rect
-  init_sources = darts_rect(init_num_sources, 0.5, 0.5, 0.95, 0.95, sources_rad)
+  init_sources = darts_rect(init_num_sources, 0.5, 0.5, 0.95, 0.95, sources_dst)
 
   L = Leaf(
     size,
