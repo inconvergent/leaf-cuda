@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
-from __future__ import division
+
+
 
 
 from numpy import pi
@@ -91,7 +91,7 @@ class LeafClosed(object):
     width = ones(vnum, 'float')
     parent = self.parent
 
-    for v in xrange(vnum):
+    for v in range(vnum):
 
       n = parent[v]
       if n<0:
@@ -113,7 +113,7 @@ class LeafClosed(object):
   def __cuda_init(self):
 
     import pycuda.autoinit
-    from helpers import load_kernel
+    from .helpers import load_kernel
 
     self.cuda_agg_count = load_kernel(
       'modules/cuda/agg_count.cu',
@@ -256,15 +256,15 @@ class LeafClosed(object):
     vs_dict = defaultdict(list)
     vs_num = zeros(self.vnum, npint)
 
-    for s in xrange(self.snum):
-      for k in xrange(sv_num[s]):
+    for s in range(self.snum):
+      for k in range(sv_num[s]):
         v = sv[s*sv_leap+k]
         if v<0:
           continue
         vs_dict[v].append(s)
         vs_num[v] += 1
 
-    vs_tuples = sorted(vs_dict.iteritems(), key=first)
+    vs_tuples = sorted(iter(vs_dict.items()), key=first)
 
     vs_map = concatenate([b for _,b in vs_tuples]).astype(npint)
     vs_ind = cumsum(concatenate([[0],vs_num])).astype(npint)
@@ -278,7 +278,7 @@ class LeafClosed(object):
 
     res = []
 
-    for v,ss in vs_dict.iteritems():
+    for v,ss in vs_dict.items():
       for s in ss:
         res.append((list(vxy[v,:]), list(sxy[s,:])))
 
@@ -303,10 +303,10 @@ class LeafClosed(object):
     zone_leap, zone_node, zone_num = self.__make_zonemap()
     sv_num, sv, dst = self.__rnn_query(zone_leap, zone_node, zone_num)
 
-    for s in xrange(self.snum):
+    for s in range(self.snum):
       near = 0
       vv = []
-      for k in xrange(sv_num[s]):
+      for k in range(sv_num[s]):
         v = sv[s*sv_leap+k]
         if v<0:
           continue
@@ -322,7 +322,7 @@ class LeafClosed(object):
     die = list(obsolete_sources.keys())
     self.smask[die] = False
 
-    for s,vv in obsolete_sources.iteritems():
+    for s,vv in obsolete_sources.items():
       vvv = list(vv)
       if len(vvv)>1:
         vxy[vnum,:] = sxy[s,:]
@@ -386,7 +386,7 @@ class LeafClosed(object):
     )
 
     abort = True
-    for i in xrange(vnum):
+    for i in range(vnum):
       gv = vec[i,:]
       if gv[0]<-3.0:
         continue

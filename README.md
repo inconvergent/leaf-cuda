@@ -12,9 +12,9 @@ http://pages.cpsc.ucalgary.ca/~federl/Publications/Siggraph-2005/
 
 In order for this code to run you must first download and install:
 
-*    `render`: https://github.com/inconvergent/render
-*    `dddUtils`: https://github.com/inconvergent/ddd-utils
-*    `fn`: https://github.com/inconvergent/fn
+*    `iutils`: https://github.com/inconvergent/render
+*    `fn`: https://github.com/inconvergent/fn-python3 (used for name
+     generation. you can edit out this dependency in `main.py`.)
 
 ## Other Dependencies
 
