@@ -13,7 +13,7 @@ http://pages.cpsc.ucalgary.ca/~federl/Publications/Siggraph-2005/
 In order for this code to run you must first download and install:
 
 *    `iutils`: https://github.com/inconvergent/render
-*    `fn`: https://github.com/inconvergent/fn-python3 (used for name
+*    `fn`: https://github.com/inconvergent/fn (used for name
      generation. you can edit out this dependency in `main.py`.)
 
 ## Other Dependencies
